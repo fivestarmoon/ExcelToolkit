@@ -1,7 +1,6 @@
 package fsm.spreadsheet;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 
 import org.apache.poi.ss.util.CellReference;
 

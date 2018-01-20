@@ -3,8 +3,6 @@ package fsm.spreadsheet;
 import java.io.File;
 import java.io.FileNotFoundException;
 
-import org.apache.poi.ss.util.CellReference;
-
 import fsm.common.Log;
 
 public abstract class SsFile
@@ -17,6 +15,11 @@ public abstract class SsFile
    public SsFile(File file)
    {
       file_ = file;
+   }
+   
+   public File getFile()
+   {
+      return file_;
    }
    
    public SsCell[][] readTable(int sheet, int[] rows, int[] cols)
@@ -100,10 +103,6 @@ public abstract class SsFile
    protected abstract void open() throws FileNotFoundException;
    protected abstract int sheetNameToIndex(String name);
    protected abstract void close() throws Exception;
-   protected File getFile()
-   {
-      return file_;
-   }
 
    protected abstract void readTableImp(int sheetIndex,
                                         int[] row,

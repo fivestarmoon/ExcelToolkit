@@ -40,6 +40,13 @@ implements ActionListener, WindowListener
       //pack();
       //new DropTarget(viewer, this);
       //new DropTarget(viewerSplit, this);
+      
+      ss_ = new TableSpreadsheet();
+      setVisible(true);
+      ss_.setOpaque(true); //content panes must be opaque
+      setContentPane(new JScrollPane(ss_));
+
+      //Display the window.
       setVisible(true);
    }
 
@@ -61,6 +68,8 @@ implements ActionListener, WindowListener
       Log.info(table.toString());
       for ( int row : table.getRowIterator() )
       {
+         ss_.addRow();
+         ss_.addLabel(new JLabel(table.getCell(row, 0).toString()), 1, true, false);
          for ( int col : table.getColIterator() )
          {
             Log.info(String.format("[%d][%d]=%s", row, col, table.getCell(row, col)));             
@@ -125,4 +134,8 @@ implements ActionListener, WindowListener
       // TODO Auto-generated method stub
       
    }
+   
+   // PRIVATE
+   
+   private TableSpreadsheet ss_;
 }
