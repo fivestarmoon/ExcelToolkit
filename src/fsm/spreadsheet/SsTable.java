@@ -175,6 +175,11 @@ public class SsTable
       }
       return cells_[row][col];
    }
+   public SsCell[] getCellsForRow(int row)
+   {
+      SsCell[] cells = cells_[row];
+      return cells;
+   }
    
    @Override
    public String toString()
