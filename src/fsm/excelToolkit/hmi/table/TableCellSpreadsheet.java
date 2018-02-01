@@ -1,36 +1,66 @@
 package fsm.excelToolkit.hmi.table;
 
 import java.awt.Component;
-import java.text.NumberFormat;
-import java.util.EventObject;
-
-import javax.swing.JFormattedTextField;
 import javax.swing.JTable;
-import javax.swing.event.CellEditorListener;
-import javax.swing.text.NumberFormatter;
-
+import javax.swing.table.DefaultTableCellRenderer;
 import fsm.spreadsheet.SsCell;
 
 public class TableCellSpreadsheet extends TableCell
 {
+   
    public TableCellSpreadsheet(SsCell cell)
    {
       cell_ = cell;
+      cellRenderer_ = new DefaultTableCellRenderer();
+   }
+
+   public TableCellSpreadsheet(double sum)
+   {
+      this(new SsCell(sum));
+   }
+
+   public TableCellSpreadsheet(String string)
+   {
+      this(new SsCell(string));
+   }
+
+   @Override
+   public Object getValue()
+   {
       if ( cell_.getType() == SsCell.Type.NUMERIC )
       {
-         NumberFormat format = NumberFormat.getInstance();
-         NumberFormatter formatter = new NumberFormatter(format);
-         formatter.setValueClass(Double.class);
-         formatter.setMinimum(Double.MIN_VALUE);
-         formatter.setMaximum(Double.MAX_VALUE);
-         formatter.setAllowsInvalid(false);
-         // If you want the value to be committed on each keystroke instead of focus lost
-         formatter.setCommitsOnValidEdit(true);
-         component_ = new JFormattedTextField(formatter);         
+         return new Double(cell_.getValue());
       }
       else
       {
-         component_ = new JFormattedTextField(); 
+         return cell_.toString();
+      }
+   }
+
+   @SuppressWarnings("rawtypes")
+   @Override
+   public Class getColumnClass()
+   {
+      if ( cell_.getType() == SsCell.Type.NUMERIC )
+      {
+         return Double.class;
+      }
+      else
+      {
+         return String.class;
+      }
+   }
+
+   @Override
+   public boolean isCellEditable()
+   {
+      if ( cell_.getType() == SsCell.Type.NUMERIC )
+      {
+         return true;
+      }
+      else
+      {
+         return false;
       }
    }
 
@@ -42,66 +72,18 @@ public class TableCellSpreadsheet extends TableCell
                                                   int row,
                                                   int column)
    {
-      return component_;
-   }
-
-   @Override
-   public Component getTableCellEditorComponent(JTable table,
-                                                Object value,
-                                                boolean isSelected,
-                                                int row,
-                                                int column)
-   {
-      return component_;
-   }
-
-   @Override
-   public Object getCellEditorValue()
-   {
-      return component_.getValue();
-   }
-
-   @Override
-   public boolean isCellEditable(EventObject anEvent)
-   {
-      return cell_.getType() != SsCell.Type.READONLY;
-   }
-
-   @Override
-   public boolean shouldSelectCell(EventObject anEvent)
-   {
-      return true;
-   }
-
-   @Override
-   public boolean stopCellEditing()
-   {
-      return cell_.getType() == SsCell.Type.READONLY;
-   }
-
-   @Override
-   public void cancelCellEditing()
-   {
-      // nop
-   }
-
-   @Override
-   public void addCellEditorListener(CellEditorListener l)
-   {
-      // TODO Auto-generated method stub
-      
-   }
-
-   @Override
-   public void removeCellEditorListener(CellEditorListener l)
-   {
-      // TODO Auto-generated method stub
-      
+      Component c = cellRenderer_.getTableCellRendererComponent(
+         table, value, isSelected, hasFocus, row, column);
+      if ( !isSelected )
+      {
+         //c.setBackground(Color.blue);
+      }
+     return c;
    }
    
    // --- PRIVATE
    
    private SsCell cell_;
-   private JFormattedTextField component_;
+   private DefaultTableCellRenderer cellRenderer_;
 
 }

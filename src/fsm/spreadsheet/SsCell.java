@@ -9,6 +9,22 @@ public class SsCell
       READONLY      
    };
    
+   public SsCell(double value)
+   {
+      double_ = value;
+      string_ = Double.toString(value);
+      type_ = Type.READONLY;
+      modified_ = false;
+   }
+
+   public SsCell(String string)
+   {
+      double_ = 0.0;
+      string_ = new String(string);
+      type_ = Type.READONLY;
+      modified_ = false;
+   }
+   
    public void update(String stringValue)
    {
       modified_ = true;
@@ -68,7 +84,7 @@ public class SsCell
       type_ = type;
       modified_ = false;
    }
-   
+
    void fill(String stringValue, double numericValue, Type type)
    {
       string_ = stringValue;

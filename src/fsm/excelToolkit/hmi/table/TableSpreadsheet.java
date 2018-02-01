@@ -8,12 +8,10 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.table.AbstractTableModel;
-import javax.swing.table.TableCellEditor;
 import javax.swing.table.TableCellRenderer;
 
 import fsm.common.parameters.Parameters;
 import fsm.excelToolkit.hmi.Window;
-import fsm.spreadsheet.SsCell;
 
 @SuppressWarnings("serial")
 public abstract  class TableSpreadsheet extends JPanel
@@ -26,7 +24,7 @@ public abstract  class TableSpreadsheet extends JPanel
       table_ = null;
       editable_ = false;
       columns_ = new String[0];
-      rows_ = new ArrayList<SsCell[]>();
+      rows_ = new ArrayList<TableCell[]>();
       delayFireRows_ = false;
 
       javax.swing.SwingUtilities.invokeLater(new Runnable()
@@ -43,7 +41,7 @@ public abstract  class TableSpreadsheet extends JPanel
       });
    }
 
-   public void createTable(Window window, Parameters params)
+   final public void createTable(Window window, Parameters params)
    {
       window_ = window;
       params_ = params;
@@ -53,7 +51,7 @@ public abstract  class TableSpreadsheet extends JPanel
          @Override
          public void run()
          {
-            createPanel();
+            createPanelBG();
          }
 
       });
@@ -61,24 +59,56 @@ public abstract  class TableSpreadsheet extends JPanel
       bgThread.start();
    }
 
-   public void setColumns(String [] columns, boolean editable)
+   public void destroyTable()
+   {
+      window_ = null;
+   }
+   
+   // --- PROTECTED
+
+   protected abstract void createPanelBG();
+
+   final protected Parameters getParameters()
+   {
+      return params_;
+   }
+
+   final protected void setColumns(String [] columns, boolean editable)
    {
       editable_ = editable;
 
       columns_ = columns.clone();
-      rows_ = new ArrayList<SsCell[]>();
+      rows_ = new ArrayList<TableCell[]>();
 
-      table_ = new JTable(new MyTableModel());
+      table_ = new MyTable(new MyTableModel());
       table_.setFillsViewportHeight(true);
+      table_.setAutoResizeMode(JTable.AUTO_RESIZE_LAST_COLUMN);
       displayPanel();
    }
+   
+   final protected void setColumnPrefferredSize(int col, int size)
+   {
+      table_.getColumnModel().getColumn(col).setPreferredWidth(size);
+   }
 
-   public void startAddRows()
+
+
+   final public void removeAllRows()
+   {
+      int numRows = rows_.size();
+      rows_.clear();
+      if ( numRows > 0 )
+      {
+         ((MyTableModel)table_.getModel()).fireTableRowsDeleted(0, numRows-1);
+      }
+   }
+
+   final protected void startAddRows()
    {
       delayFireRows_ = true;
    }
 
-   public void addRowOfCells(SsCell[] rowOfCells)
+   final protected void addRowOfCells(TableCell[] rowOfCells)
    {
       rows_.add(rowOfCells);
       if ( !delayFireRows_ )
@@ -87,7 +117,7 @@ public abstract  class TableSpreadsheet extends JPanel
       }
    }
 
-   public void stopAddRows()
+   final protected void stopAddRows()
    {
       if ( !delayFireRows_ )
       {
@@ -96,21 +126,7 @@ public abstract  class TableSpreadsheet extends JPanel
       delayFireRows_ = false;
    }
 
-   public void destroyTable()
-   {
-      window_ = null;
-   }
-
-   // PROTECTED
-
-   protected abstract void createPanel();
-
-   protected Parameters getParameters()
-   {
-      return params_;
-   }
-
-   protected void displayPanel()
+   final protected void displayPanel()
    {
       javax.swing.SwingUtilities.invokeLater(new Runnable()
       {
@@ -136,58 +152,39 @@ public abstract  class TableSpreadsheet extends JPanel
    private JTable table_;
    private boolean editable_;
    private String [] columns_;
-   private ArrayList<SsCell[]> rows_;
+   private ArrayList<TableCell[]> rows_;
    private boolean delayFireRows_;
 
    @SuppressWarnings("rawtypes")
-   class MyTable extends JTable
+   private class MyTable extends JTable
    {
-      private static final long serialVersionUID = 1L;
-      private Class editingClass;
-
-      @Override
-      public TableCellRenderer getCellRenderer(int row, int column) 
+      public MyTable(MyTableModel myTableModel)
       {
-          editingClass = null;
-          int modelColumn = convertColumnIndexToModel(column);
-          if (modelColumn == 1) {
-              Class rowClass = getModel().getValueAt(row, modelColumn).getClass();
-              return getDefaultRenderer(rowClass);
-          } 
-          else 
-          {
-              return super.getCellRenderer(row, column);
-          }
+         super.setModel(myTableModel);
       }
 
       @Override
-      public TableCellEditor getCellEditor(int row, int column) 
+      public TableCellRenderer getCellRenderer(int row, int col) 
       {
-          editingClass = null;
-          int modelColumn = convertColumnIndexToModel(column);
-          if (modelColumn == 1) {
-              editingClass = getModel().getValueAt(row, modelColumn).getClass();
-              return getDefaultEditor(editingClass);
-          } 
-          else 
-          {
-              return super.getCellEditor(row, column);
-          }
+          editingClass_ = rows_.get(row)[col].getColumnClass();
+          return rows_.get(row)[col];
       }
       //  This method is also invoked by the editor when the value in the editor
       //  component is saved in the TableModel. The class was saved when the
       //  editor was invoked so the proper class can be created.
 
+      @SuppressWarnings("unchecked")
       @Override
-      public Class getColumnClass(int column) {
-          return editingClass != null ? editingClass : super.getColumnClass(column);
+      public Class getColumnClass(int column) 
+      {
+          return editingClass_;
       }
       
       private Class editingClass_;
    }
 
 
-   class MyTableModel extends AbstractTableModel 
+   private class MyTableModel extends AbstractTableModel 
    {
       public int getColumnCount() 
       {
@@ -206,7 +203,7 @@ public abstract  class TableSpreadsheet extends JPanel
 
       public Object getValueAt(int row, int col) 
       {
-         return rows_.get(row)[col].toString();
+         return rows_.get(row)[col].getValue();
       }
 
       /*
@@ -215,11 +212,11 @@ public abstract  class TableSpreadsheet extends JPanel
        */
       public boolean isCellEditable(int row, int col)
       {
-         if ( !editable_ )
+         if ( rows_.get(row)[col] instanceof TableCellSpreadsheet && !editable_ )
          {
             return false;
          }
-         return rows_.get(row)[col].getType() != SsCell.Type.READONLY;
+         return rows_.get(row)[col].isCellEditable();
       }
 
 

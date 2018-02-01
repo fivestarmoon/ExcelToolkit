@@ -7,10 +7,7 @@ import javax.swing.*;
 
 import fsm.common.Log;
 import fsm.common.parameters.Parameters;
-import fsm.common.parameters.Reader;
 import fsm.excelToolkit.hmi.table.TableSpreadsheet;
-import fsm.spreadsheet.SsFile;
-import fsm.spreadsheet.SsTable;
 
 @SuppressWarnings("serial")
 public class Window extends JFrame
@@ -33,7 +30,7 @@ implements ActionListener, WindowListener
       //updateLayout();
 
       // Set the window size
-      setSize(new Dimension(500,400));
+      setSize(new Dimension(600,500));
       setLocation(new Point(400,400));
       this.addWindowListener(this);
 
