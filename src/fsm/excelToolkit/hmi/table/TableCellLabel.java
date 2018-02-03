@@ -1,6 +1,5 @@
 package fsm.excelToolkit.hmi.table;
 
-import java.awt.Color;
 import java.awt.Component;
 import javax.swing.JTable;
 
@@ -40,7 +39,11 @@ public class TableCellLabel extends TableCell
    {
       Component c = table.getDefaultRenderer(String.class).getTableCellRendererComponent(
          table, value, isSelected, hasFocus, row, column);
-      c.setBackground(Color.yellow);
+      if ( !isSelected )
+      {
+         c.setBackground(super.getBackgroundColor(c.getBackground()));
+      }
+      c.setFont(super.getFont(c.getFont()));
       return c;
    }
    

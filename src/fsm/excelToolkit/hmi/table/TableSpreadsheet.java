@@ -8,6 +8,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.table.AbstractTableModel;
+import javax.swing.table.TableCellEditor;
 import javax.swing.table.TableCellRenderer;
 
 import fsm.common.parameters.Parameters;
@@ -35,7 +36,7 @@ public abstract  class TableSpreadsheet extends JPanel
             if ( window_ != null )
             {
                add(new JLabel("Loading ..."));
-               window_.showTable(TableSpreadsheet.this);
+               window_.showContent(TableSpreadsheet.this);
             }
          }         
       });
@@ -138,7 +139,7 @@ public abstract  class TableSpreadsheet extends JPanel
                // Add the scroll pane to this panel.
                removeAll();
                add(new JScrollPane(table_));
-               window_.showTable(TableSpreadsheet.this);
+               window_.showContent(TableSpreadsheet.this);
             }
          }         
       });
@@ -168,6 +169,17 @@ public abstract  class TableSpreadsheet extends JPanel
       {
           editingClass_ = rows_.get(row)[col].getColumnClass();
           return rows_.get(row)[col];
+      }
+
+      @Override
+      public TableCellEditor getCellEditor(int row, int col) 
+      {
+         if ( rows_.get(row)[col] instanceof TableCellButton )
+         {
+            TableCellButton cell = (TableCellButton) rows_.get(row)[col];
+            return cell;
+         }
+         return super.getCellEditor(row, col);
       }
       //  This method is also invoked by the editor when the value in the editor
       //  component is saved in the TableModel. The class was saved when the

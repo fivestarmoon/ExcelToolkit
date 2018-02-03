@@ -1,11 +1,14 @@
 package fsm.excelToolkit.hmi.table;
 
 import java.awt.Component;
+import java.util.EventObject;
+
 import javax.swing.JButton;
 import javax.swing.JTable;
-import javax.swing.UIManager;
+import javax.swing.event.CellEditorListener;
+import javax.swing.table.TableCellEditor;
 
-public class TableCellButton extends TableCell
+public class TableCellButton extends TableCell implements TableCellEditor
 {
    public TableCellButton(JButton component)
    {
@@ -29,7 +32,7 @@ public class TableCellButton extends TableCell
    @Override
    public boolean isCellEditable()
    {
-      return false;
+      return true;
    }
 
    @Override
@@ -40,16 +43,60 @@ public class TableCellButton extends TableCell
                                                   int row,
                                                   int column)
    {
-      if (isSelected) 
-      { 
-         component_.setForeground(table.getSelectionForeground());
-         component_.setBackground(table.getSelectionBackground());
-      } 
-      else 
+      if ( !isSelected )
       {
-         component_.setForeground(table.getForeground());
-         component_.setBackground(UIManager.getColor("Button.background"));
+         component_.setBackground(super.getBackgroundColor(component_.getBackground()));
       }
+      component_.setFont(super.getFont(component_.getFont()));
+      return component_;
+   }
+
+   @Override
+   public Object getCellEditorValue()
+   {
+      return null;
+   }
+
+   @Override
+   public boolean isCellEditable(EventObject anEvent)
+   {
+      return true;
+   }
+
+   @Override
+   public boolean shouldSelectCell(EventObject anEvent)
+   {
+      return true;
+   }
+
+   @Override
+   public boolean stopCellEditing()
+   {
+      return true;
+   }
+
+   @Override
+   public void cancelCellEditing()
+   {
+   }
+
+   @Override
+   public void addCellEditorListener(CellEditorListener l)
+   {      
+   }
+
+   @Override
+   public void removeCellEditorListener(CellEditorListener l)
+   {      
+   }
+
+   @Override
+   public Component getTableCellEditorComponent(JTable table,
+                                                Object value,
+                                                boolean isSelected,
+                                                int row,
+                                                int column)
+   {
       return component_;
    }
 

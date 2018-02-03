@@ -117,6 +117,9 @@ public class SsXlsx extends SsFile
                numericValue = cell.getBooleanCellValue()?1.0:0.0;
                stringValue = Double.toString(numericValue);
             case BLANK:
+               type = Type.NUMERIC;
+               numericValue = 0.0;
+               stringValue = "";
             case ERROR:
             case FORMULA:
             case _NONE:

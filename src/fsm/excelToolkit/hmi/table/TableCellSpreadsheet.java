@@ -76,8 +76,9 @@ public class TableCellSpreadsheet extends TableCell
          table, value, isSelected, hasFocus, row, column);
       if ( !isSelected )
       {
-         //c.setBackground(Color.blue);
+         c.setBackground(super.getBackgroundColor(c.getBackground()));
       }
+      c.setFont(super.getFont(c.getFont()));
      return c;
    }
    

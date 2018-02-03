@@ -1,5 +1,6 @@
 package fsm.excelToolkit.hmi;
 
+import java.awt.Color;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.ArrayList;
@@ -62,7 +63,10 @@ public class WpsrSummaryPanel extends TableSpreadsheet
 
          ssReferences_.add(file);
          spreadsheets_.put(file, ss);
-         ss.load();
+      }
+      for ( String ref : ssReferences_ )
+      {
+         spreadsheets_.get(ref).load();
       }
    }
 
@@ -70,7 +74,7 @@ public class WpsrSummaryPanel extends TableSpreadsheet
 
    private void displaySpreadSheet(String ssReference, LocalSpreadSheet sheet)
    {
-      spreadsheets_.put(ssReference, sheet);
+      //spreadsheets_.put(ssReference, sheet);
       removeAllRows();
       startAddRows();
       for ( String ref : ssReferences_ )
@@ -92,6 +96,10 @@ public class WpsrSummaryPanel extends TableSpreadsheet
              } 
            });
          controls[Columns.VARIANCE.getIndex()] =  new TableCellButton(reloadB);
+         for ( int ci=0; ci<Columns.length(); ci++ )
+         {
+            controls[ci].setBlendBackgroundColor(new Color(230,242,255,64));
+         }
          addRowOfCells(controls);
             
          SsTable table = ss.table_;
@@ -104,12 +112,21 @@ public class WpsrSummaryPanel extends TableSpreadsheet
          {
             SsCell[] cells = table.getCellsForRow(row);
             TableCell[] tableCells = new TableCell[Columns.length()];
+            double variance = cells[Columns.BUDGET.getIndex()].getValue();
             for ( Columns col : Columns.values() )
             {
                int index = col.getIndex();
                if ( col.getResourceKey().length() > 0 )
                {
-                  tableCells[index] = new TableCellSpreadsheet(cells[index]);                  
+                  tableCells[index] = new TableCellSpreadsheet(cells[index]); 
+                  if ( col == Columns.RESOURCE )
+                  {
+                     tableCells[index].setBlendBackgroundColor(new Color(255,255,0,64));
+                  }     
+                  else if ( col == Columns.BUDGET )
+                  {
+                     tableCells[index].setBold(true);
+                  }                             
                }
                else if ( col == Columns.EAC )
                {
@@ -117,7 +134,15 @@ public class WpsrSummaryPanel extends TableSpreadsheet
                   sum += cells[Columns.PREVACTUAL.getIndex()].getValue();
                   sum += cells[Columns.THISACTUAL.getIndex()].getValue();
                   sum += cells[Columns.ETC.getIndex()].getValue();
-                  tableCells[index] = new TableCellSpreadsheet(sum);  
+                  sum = Math.round(sum*100.0)/100.0;
+                  tableCells[index] = new TableCellSpreadsheet(sum); 
+                  tableCells[index].setBold(true);
+                  variance -= sum;
+               }
+               else if ( col == Columns.VARIANCE )
+               {
+                  variance = Math.round(variance*100.0)/100.0;
+                  tableCells[index] = new TableCellSpreadsheet(variance);
                }
                else
                {
