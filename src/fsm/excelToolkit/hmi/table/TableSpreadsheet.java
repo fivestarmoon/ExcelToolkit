@@ -162,6 +162,7 @@ public abstract  class TableSpreadsheet extends JPanel
       public MyTable(MyTableModel myTableModel)
       {
          super.setModel(myTableModel);
+         super.getTableHeader().setReorderingAllowed(false);
       }
 
       @Override

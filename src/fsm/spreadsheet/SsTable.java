@@ -150,11 +150,11 @@ public class SsTable
    {
       if ( sheetRefIsString_ )
       {
-         cells_ = file_.readTable(sheetString_, getRowsInSheet(), getColsInSheet());
+         cells_ = file_.readTable(sheetString_, this);
       }
       else
       {
-         cells_ = file_.readTable(sheetInt_, getRowsInSheet(), getColsInSheet());
+         cells_ = file_.readTable(sheetInt_, this);
       }
    }
    
@@ -209,13 +209,13 @@ public class SsTable
       return stringbuilder.toString();
    }
    
-   // --- PRIVATE
+   // --- PROTECTED
 
-   private SsFile file_;
-   private boolean sheetRefIsString_;
-   private String sheetString_;
-   private int sheetInt_;
-   private ArrayList<Integer> rows_;
-   private ArrayList<Integer> cols_;
-   private SsCell[][] cells_;
+   protected SsFile file_;
+   protected boolean sheetRefIsString_;
+   protected String sheetString_;
+   protected int sheetInt_;
+   protected ArrayList<Integer> rows_;
+   protected ArrayList<Integer> cols_;
+   protected SsCell[][] cells_;
 }

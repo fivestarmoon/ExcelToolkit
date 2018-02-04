@@ -1,5 +1,7 @@
 package fsm.spreadsheet;
 
+import java.util.ArrayList;
+
 public class SsCell
 {
    public enum Type
@@ -65,6 +67,22 @@ public class SsCell
    public boolean isModified()
    {
       return modified_;
+   }
+   
+   public static void AddUnique(SsCell cell, ArrayList<String> values)
+   {
+      if ( cell.toString().length() == 0 )
+      {
+         return;
+      }
+      for ( String value : values )
+      {
+         if ( cell.toString().equals(value)  )
+         {
+            return; // already on the list
+         }
+      }
+      values.add(cell.toString());
    }
    
    // --- PROTECTED

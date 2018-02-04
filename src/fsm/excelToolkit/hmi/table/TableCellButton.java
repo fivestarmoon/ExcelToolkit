@@ -14,6 +14,7 @@ public class TableCellButton extends TableCell implements TableCellEditor
    {
       component_ = component;
       component_.setFocusable(false);
+      component_.setOpaque(true);
    }
 
    @Override

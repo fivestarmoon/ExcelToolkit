@@ -7,7 +7,7 @@ import fsm.spreadsheet.SsCell;
 
 public class TableCellSpreadsheet extends TableCell
 {
-   
+
    public TableCellSpreadsheet(SsCell cell)
    {
       cell_ = cell;
@@ -79,11 +79,11 @@ public class TableCellSpreadsheet extends TableCell
          c.setBackground(super.getBackgroundColor(c.getBackground()));
       }
       c.setFont(super.getFont(c.getFont()));
-     return c;
+      return c;
    }
-   
+
    // --- PRIVATE
-   
+
    private SsCell cell_;
    private DefaultTableCellRenderer cellRenderer_;
 

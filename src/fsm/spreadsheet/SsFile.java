@@ -15,6 +15,7 @@ public abstract class SsFile
    public SsFile(File file)
    {
       file_ = file;
+      readSheet_ = "";
    }
    
    public File getFile()
@@ -22,8 +23,15 @@ public abstract class SsFile
       return file_;
    }
    
-   public SsCell[][] readTable(int sheet, int[] rows, int[] cols)
+   public String getReadSheet()
    {
+      return readSheet_;
+   }
+   
+   public SsCell[][] readTable(int sheet, SsTable ssTable)
+   {
+      int[] rows = ssTable.getRowsInSheet();
+      int[] cols = ssTable.getColsInSheet();
       SsCell[][] table = new SsCell[rows.length][cols.length];
       for ( int row=0; row < rows.length; row++ )
       {
@@ -35,6 +43,7 @@ public abstract class SsFile
       try
       {
          open();
+         readSheet_ = this.sheetIndexToName(sheet);
          readTableImp(sheet,
                       rows, 
                       cols, 
@@ -57,8 +66,10 @@ public abstract class SsFile
       return table;
    }
    
-   public SsCell[][] readTable(String sheet, int[] rows, int[] cols)
+   public SsCell[][] readTable(String sheet, SsTable ssTable)
    {
+      int[] rows = ssTable.getRowsInSheet();
+      int[] cols = ssTable.getColsInSheet();
       SsCell[][] table = new SsCell[rows.length][cols.length];
       for ( int row=0; row < rows.length; row++ )
       {
@@ -71,6 +82,7 @@ public abstract class SsFile
       try
       {
          open();
+         readSheet_ = sheet;
          readTableImp(sheetNameToIndex(sheet),
                       rows, 
                       cols, 
@@ -102,6 +114,7 @@ public abstract class SsFile
    protected abstract boolean isOk();
    protected abstract void open() throws FileNotFoundException;
    protected abstract int sheetNameToIndex(String name);
+   protected abstract String sheetIndexToName(int index);
    protected abstract void close() throws Exception;
 
    protected abstract void readTableImp(int sheetIndex,
@@ -117,5 +130,6 @@ public abstract class SsFile
    // --- PRIVATE
    
    private File file_;
+   private String readSheet_;
 
 }

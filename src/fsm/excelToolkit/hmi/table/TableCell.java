@@ -23,6 +23,10 @@ public abstract class TableCell implements TableCellRenderer
    {
       bold_ = bold;
    }
+   public void setItalics(boolean b)
+   {
+      italics_ = b;
+   }
    
    
    protected Font getFont(Font componentFont)
@@ -32,6 +36,10 @@ public abstract class TableCell implements TableCellRenderer
          if ( bold_ )
          {
             font_ = new Font(componentFont.getName(), Font.BOLD, componentFont.getSize());
+         }
+         else if ( italics_ )
+         {
+            font_ = new Font(componentFont.getName(), Font.ITALIC, componentFont.getSize());
          }
          else
          {
@@ -75,4 +83,5 @@ public abstract class TableCell implements TableCellRenderer
    private Color backgroundColor_ = null;
    private Font  font_ = null;
    private boolean bold_;
+   private boolean italics_;
 }

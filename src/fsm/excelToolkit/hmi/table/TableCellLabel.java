@@ -2,12 +2,14 @@ package fsm.excelToolkit.hmi.table;
 
 import java.awt.Component;
 import javax.swing.JTable;
+import javax.swing.table.DefaultTableCellRenderer;
 
 public class TableCellLabel extends TableCell
 {
    public TableCellLabel(String text)
    {
       text_ = text;
+      cellRenderer_ = new DefaultTableCellRenderer();
    }
 
    @Override
@@ -37,7 +39,7 @@ public class TableCellLabel extends TableCell
                                                   int row,
                                                   int column)
    {
-      Component c = table.getDefaultRenderer(String.class).getTableCellRendererComponent(
+      Component c = cellRenderer_.getTableCellRendererComponent(
          table, value, isSelected, hasFocus, row, column);
       if ( !isSelected )
       {
@@ -50,5 +52,6 @@ public class TableCellLabel extends TableCell
    // --- PRIVATE
    
    private String text_;
+   private DefaultTableCellRenderer cellRenderer_;
 
 }

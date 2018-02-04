@@ -13,7 +13,7 @@ public class Main
 
    public static void main(final String[] args)
    {
-      Log.Init();
+      Log.Init(new File("ExcelToolkit.log"));
       Log.info("Starting ...");
 
       

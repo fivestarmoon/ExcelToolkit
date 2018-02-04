@@ -17,6 +17,7 @@ import javax.swing.*;
 import fsm.common.Log;
 import fsm.common.parameters.Parameters;
 import fsm.excelToolkit.hmi.table.TableSpreadsheet;
+import fsm.excelToolkit.wpsr.WpsrSummaryPanel;
 
 @SuppressWarnings("serial")
 public class Window extends JFrame
@@ -29,19 +30,12 @@ implements WindowListener, DropTargetListener
 
       // Set the main window frame's title
       setTitle("Excel Toolkit");
-//      ArrayList<Image> icons = new ArrayList<Image>();
-//      icons.add(LvApplication.getImageResource("icon16x16.png"));
-//      icons.add(LvApplication.getImageResource("icon32x32.png"));
-//      setIconImages(icons);
       setResizable(true);
 
-      // Add the main window components
-      //updateLayout();
-
       // Set the window size
-      setSize(new Dimension(600,500));
-      setLocation(new Point(400,400));
-      this.addWindowListener(this);
+      setSize(new Dimension(700,700));
+      setLocation(new Point(100,100));
+      addWindowListener(this);
 
       // Create the menu
       JMenuBar menuBar = new JMenuBar();
@@ -50,27 +44,36 @@ implements WindowListener, DropTargetListener
       fileMenu.setMnemonic(KeyEvent.VK_F);
       fileMenu.setMnemonic(KeyEvent.VK_F);
       JMenuItem openItem = new JMenuItem("Open ...");
-      openItem.setActionCommand("open");
       openItem.setMnemonic(KeyEvent.VK_O);
       openItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_O, InputEvent.CTRL_MASK));
       openItem.addActionListener(new ActionListener()
          {
-
             @Override
             public void actionPerformed(ActionEvent e)
             {
-               JFileChooser chooser = new JFileChooser();
+               JFileChooser chooser = new JFileChooser(".");
                int returnVal = chooser.showOpenDialog(Window.this);
                if(returnVal == JFileChooser.APPROVE_OPTION)
                {
                   processNewParameterFile(chooser.getSelectedFile().getAbsolutePath());
                }
-            }
-         
+            }         
          });
       fileMenu.add(openItem);
+      JMenuItem quitItem = new JMenuItem("Exit");
+      quitItem.setMnemonic(KeyEvent.VK_X);
+      quitItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_X, InputEvent.CTRL_MASK));
+      quitItem.addActionListener(new ActionListener()
+      {
+         @Override
+         public void actionPerformed(ActionEvent e)
+         {
+            Window.this.dispatchEvent(new WindowEvent(Window.this, WindowEvent.WINDOW_CLOSING));
+         }      
+      });
+      fileMenu.add(quitItem);
       menuBar.add(fileMenu);
-      this.setJMenuBar(menuBar);
+      setJMenuBar(menuBar);
 
       // Display the window.
       showContent(new JLabel("Nothing to display ..."));
@@ -152,29 +155,21 @@ implements WindowListener, DropTargetListener
    @Override
    public void dragEnter(DropTargetDragEvent dtde)
    {
-      // TODO Auto-generated method stub
-      
    }
 
    @Override
    public void dragOver(DropTargetDragEvent dtde)
    {
-      // TODO Auto-generated method stub
-      
    }
 
    @Override
    public void dropActionChanged(DropTargetDragEvent dtde)
    {
-      // TODO Auto-generated method stub
-      
    }
 
    @Override
    public void dragExit(DropTargetEvent dte)
    {
-      // TODO Auto-generated method stub
-      
    }
 
    @Override

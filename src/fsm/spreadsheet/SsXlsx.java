@@ -50,6 +50,12 @@ public class SsXlsx extends SsFile
    {
       return wb_.getSheetIndex(name);
    }
+   
+   @Override
+   protected String sheetIndexToName(int index)
+   {
+      return wb_.getSheetName(index);
+   }
 
    @Override
    public void close() throws Exception
@@ -135,8 +141,7 @@ public class SsXlsx extends SsFile
    @Override
    public void writeTableImp(int sheet, int[] rows, int[] cols, SsCell[][] cells_)
    {
-      // TODO Auto-generated method stub
-      
+      // TODO Implement writeTableImp()     
    }
    
    // --- PRIVATE
