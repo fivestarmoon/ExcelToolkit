@@ -12,6 +12,8 @@ import java.awt.dnd.DropTargetDropEvent;
 import java.awt.dnd.DropTargetEvent;
 import java.awt.dnd.DropTargetListener;
 import java.awt.event.*;
+import java.io.File;
+
 import javax.swing.*;
 
 import fsm.common.Log;
@@ -76,12 +78,14 @@ implements WindowListener, DropTargetListener
       setJMenuBar(menuBar);
 
       // Display the window.
+      title_ = "";
       showContent(new JLabel("Nothing to display ..."));
       setVisible(true);
    }
    
    public void showContent(Container content)
    {
+      setTitle("Excel Toolkit [" + title_ + "]");
       setContentPane(content);
       new DropTarget(content, this);
       revalidate(); 
@@ -96,6 +100,10 @@ implements WindowListener, DropTargetListener
          String type = params_.getReader().getStringValue("type", "");
          if ( "wpsr_summary".equalsIgnoreCase(type) )
          {
+            setSize(new Dimension(
+               (int) params_.getReader().getLongValue("width",  700),
+               (int) params_.getReader().getLongValue("height",  700)));
+            title_ = new File(absolutePath).getName();
             showContent(new JLabel("Loading WPSR summary ..."));
             table_ = new WpsrSummaryPanel();
             table_.createTable(this, params_); // eventually calls showContent         
@@ -223,4 +231,5 @@ implements WindowListener, DropTargetListener
    
    private Parameters params_;
    private TableSpreadsheet table_;
+   private String title_;
 }

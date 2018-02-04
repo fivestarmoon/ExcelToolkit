@@ -73,8 +73,7 @@ public class SsXlsx extends SsFile
          fis_ = null;
          wb_ = null;
          formulaEvaluator_ = null;
-      }
-      
+      }      
    }
    
    // --- PROTECTED

@@ -18,6 +18,11 @@ public abstract class SsFile
       readSheet_ = "";
    }
    
+   public void setFileModifiedListener(SsFileModifiedListener l)
+   {
+      fileModifiedListener_ = l;
+   }
+   
    public File getFile()
    {
       return file_;
@@ -42,6 +47,11 @@ public abstract class SsFile
       }
       try
       {
+         if ( fileMonitor_ != null )
+         {
+            fileMonitor_.stop();
+         }
+         fileMonitor_ = new FileMonitor(file_, fileModifiedListener_);
          open();
          readSheet_ = this.sheetIndexToName(sheet);
          readTableImp(sheet,
@@ -81,6 +91,11 @@ public abstract class SsFile
       if ( !isOk() ) return table;
       try
       {
+         if ( fileMonitor_ != null )
+         {
+            fileMonitor_.stop();
+         }
+         fileMonitor_ = new FileMonitor(file_, fileModifiedListener_);
          open();
          readSheet_ = sheet;
          readTableImp(sheetNameToIndex(sheet),
@@ -108,6 +123,14 @@ public abstract class SsFile
       
    }
    
+   public void stopFileListener() throws Exception
+   {
+      if ( fileMonitor_ != null )
+      {
+         fileMonitor_.stop();
+      }
+   }
+   
    
    // --- PROTECTED
 
@@ -129,7 +152,60 @@ public abstract class SsFile
    
    // --- PRIVATE
    
+   private static class FileMonitor implements Runnable
+   {
+      public FileMonitor(File file, SsFileModifiedListener l)
+      {
+         file_ = file;
+         fileModifiedListener_ = l;
+         if ( fileModifiedListener_ != null )
+         {
+            Thread thread = new Thread(this);
+            thread.setDaemon(true);
+            thread.start();
+         }
+      }
+      @Override
+      public void run()
+      {
+         long timeUpdated = file_.lastModified();
+         while ( true)
+         {
+            if ( fileModifiedListener_ == null )
+            {
+               break;
+            }
+            long newModified = file_.lastModified();
+            if ( newModified != timeUpdated )
+            {
+               break;
+            }
+            try
+            {
+               Thread.sleep(3000);
+            }
+            catch (InterruptedException e)
+            {
+            }
+         }
+         SsFileModifiedListener fileModifiedListener = fileModifiedListener_;
+         if ( fileModifiedListener != null )
+         {
+            fileModifiedListener.fileModified();
+         }
+         
+      }  
+      public void stop()
+      {
+         fileModifiedListener_ = null;
+      }    
+      private File file_;
+      private SsFileModifiedListener fileModifiedListener_;
+   }
+   
    private File file_;
    private String readSheet_;
+   private SsFileModifiedListener fileModifiedListener_;
+   private FileMonitor fileMonitor_;
 
 }

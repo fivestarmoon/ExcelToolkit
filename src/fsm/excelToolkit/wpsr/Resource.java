@@ -33,6 +33,20 @@ public class Resource
       }          
    }
    
+   public void sum(SsCell[] cells)
+   {
+      used_ = true;
+      for ( Columns col : Columns.values() )
+      {
+         if ( !col.isSpreadsheetCol() )
+         {
+            continue;
+         }
+         int index = col.getIndex();
+         sum_[index] += cells[index].getValue();
+      }          
+   }
+   
    public boolean isUsed()
    {
       return used_;
