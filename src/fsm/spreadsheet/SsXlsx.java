@@ -67,6 +67,7 @@ public class SsXlsx extends SsFile
       }
       catch (IOException e)
       {
+         Log.severe("Problems closing", e);
       }
       finally
       {

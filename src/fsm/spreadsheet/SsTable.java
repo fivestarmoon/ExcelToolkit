@@ -19,9 +19,8 @@ public class SsTable
    public SsTable(SsFile file, String sheet)
    {
       file_ = file;
-      sheetRefIsString_ = false;
+      sheetRefIsString_ = true;
       setSheetString(new String(sheet));
-      setSheetInt(0);
       rows_ = new ArrayList<Integer>();
       cols_ = new ArrayList<Integer>();
       cells_ = new SsCell[0][0];
@@ -31,7 +30,6 @@ public class SsTable
    {
       file_ = file;
       sheetRefIsString_ = false;
-      setSheetString("");
       setSheetInt(sheet);
       rows_ = new ArrayList<Integer>();
       cols_ = new ArrayList<Integer>();
@@ -146,7 +144,7 @@ public class SsTable
       return cols;
    }
    
-   public void readTable()
+   public void readTable() throws Exception
    {
       if ( sheetRefIsString_ )
       {

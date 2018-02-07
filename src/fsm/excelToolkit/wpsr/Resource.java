@@ -11,23 +11,19 @@ public class Resource
    public Resource(String name)
    {
       name_ = name;
-      sum_ = new double[Columns.length()];
+      sum_ = new double[SsColumns.length()];
       used_ = false;
    }
    
    public void sumif(SsCell[] cells)
    {
-      if ( !name_.equals(cells[Columns.RESOURCE.getIndex()].toString()) )
+      if ( !name_.equals(cells[SsColumns.RESOURCE.getIndex()].toString()) )
       {
          return;
       }
       used_ = true;
-      for ( Columns col : Columns.values() )
+      for ( SsColumns col : SsColumns.values() )
       {
-         if ( !col.isSpreadsheetCol() )
-         {
-            continue;
-         }
          int index = col.getIndex();
          sum_[index] += cells[index].getValue();
       }          
@@ -36,12 +32,8 @@ public class Resource
    public void sum(SsCell[] cells)
    {
       used_ = true;
-      for ( Columns col : Columns.values() )
+      for ( SsColumns col : SsColumns.values() )
       {
-         if ( !col.isSpreadsheetCol() )
-         {
-            continue;
-         }
          int index = col.getIndex();
          sum_[index] += cells[index].getValue();
       }          
@@ -52,63 +44,53 @@ public class Resource
       return used_;
    }
    
-   public SsCell[] getSummedCells()
-   {
-      SsCell[] cells = new SsCell[Columns.length()];
-      for ( Columns col : Columns.values() )
-      {
-         int ii = col.getIndex();
-         if ( col == Columns.RESOURCE )
-         {
-            cells[ii] = new SsCell(name_);            
-         }
-         else
-         {
-            cells[ii] = new SsCell(Columns.Round(sum_[ii])); 
-         }
-      }
-      return cells;
-   }
-   
    public TableCell[] getTableCells()
    {
-      SsCell[] cells = getSummedCells();
-      TableCell[] tableCells = new TableCell[Columns.length()];
-      for ( Columns col : Columns.values() )
+      TableCell[] tableCells = new TableCell[HmiColumns.length()];
+      
+      int index = HmiColumns.RESOURCE.getIndex();
+      tableCells[index] = new TableCellSpreadsheet(new SsCell(name_)); 
+      tableCells[index].setBlendBackgroundColor(new Color(255,255,0,64));
+      
+      index = HmiColumns.BUDGET.getIndex();
+      double budget = sum_[SsColumns.BUDGET.getIndex()];
+      tableCells[index] = new TableCellSpreadsheet(new SsCell(Round(budget))); 
+      tableCells[index].setBold(true);
+      
+      index = HmiColumns.ACTUAL.getIndex();
+      double actual = sum_[SsColumns.PREVACTUAL.getIndex()]
+               + sum_[SsColumns.THISACTUAL.getIndex()];
+      tableCells[index] = new TableCellSpreadsheet(new SsCell(Round(actual))); 
+      
+      index = HmiColumns.ETC.getIndex();
+      double etc = sum_[SsColumns.ETC.getIndex()];
+      tableCells[index] = new TableCellSpreadsheet(new SsCell(Round(etc)));
+      
+      index = HmiColumns.EAC.getIndex();
+      double eac = actual + etc;
+      tableCells[index] = new TableCellSpreadsheet(new SsCell(Round(eac))); 
+      tableCells[index].setBold(true); 
+      
+      index = HmiColumns.VARIANCE.getIndex();
+      double variance = budget - eac;
+      tableCells[index] = new TableCellSpreadsheet(new SsCell(Round(variance)));
+      if ( variance < 0 )
       {
-         int index = col.getIndex();
-         if ( col.isSpreadsheetCol() )
-         {
-            tableCells[index] = new TableCellSpreadsheet(cells[index]); 
-            if ( col == Columns.RESOURCE )
-            {
-               tableCells[index].setBlendBackgroundColor(new Color(255,255,0,64));
-            }     
-            else if ( col == Columns.BUDGET )
-            {
-               tableCells[index].setBold(true);
-            }                             
-         }
-         else if ( col == Columns.EAC )
-         {
-            tableCells[index] = new TableCellSpreadsheet(Columns.GetEacFromCols(cells)); 
-            tableCells[index].setBold(true);
-         }
-         else if ( col == Columns.VARIANCE )
-         {
-            tableCells[index] = new TableCellSpreadsheet(Columns.GetVarianceFromCols(cells)); 
-         }
-         else
-         {
-            tableCells[index] =  new TableCellSpreadsheet("");
-         }
+         tableCells[index].setBlendBackgroundColor(varianceWarning_);
       }
+      
       return tableCells;
    }
 
    // --- PRIVATE
    
+   private static double Round(double value)
+   {
+      return Math.round(value*100.0) / 100.0;
+   }
+   
    private String name_;
    private double[] sum_;
    private boolean used_;
+   private Color varianceWarning_ = new Color(255, 0, 0, 64);
 }

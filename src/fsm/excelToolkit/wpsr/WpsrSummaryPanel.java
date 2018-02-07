@@ -1,8 +1,11 @@
 package fsm.excelToolkit.wpsr;
 
 import java.awt.Color;
+import java.awt.Desktop;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -31,19 +34,67 @@ public class WpsrSummaryPanel extends TableSpreadsheet
    @Override
    public void createPanelBG()
    {  
-      String[] columnTitle = new String[Columns.length()];
-      Columns[] columns = Columns.values();
-      for ( int ii=0; ii<Columns.length(); ii++ )
+      String[] columnTitle = new String[HmiColumns.length()];
+      HmiColumns[] columns = HmiColumns.values();
+      for ( int ii=0; ii<HmiColumns.length(); ii++ )
       {
          columnTitle[ii] = columns[ii].getColumnTitle();
       }
-      setColumns(columnTitle, true);
+      setColumns(columnTitle, false);
       setColumnPrefferredSize(0, 100);
 
-      Reader[] readers = getParameters().getReader().structArray("wpsrs");
-      for ( Reader reader : readers )
+      // Load the default values for columns and rows if available
+      Reader reader = getParameters().getReader();
+      String rootDir = "";
+      if ( reader.isKeyForValue("ROOTDIR") )
       {
-         LocalSpreadSheet ss = new LocalSpreadSheet(reader);
+         rootDir = reader.getStringValue("ROOTDIR", "");
+      }
+      if ( reader.isKeyForValue("resourceColDefault") )
+      {
+         SsColumns.RESOURCE.setDefaultValue(reader.getStringValue("resourceColDefault", "A"));
+      }
+      if ( reader.isKeyForValue("budgetColDefault") )
+      {
+         SsColumns.BUDGET.setDefaultValue(reader.getStringValue("budgetColDefault", "A"));
+      }
+      if ( reader.isKeyForValue("prevActualColDefault") )
+      {
+         SsColumns.PREVACTUAL.setDefaultValue(reader.getStringValue("prevActualColDefault", "A"));
+      }
+      if ( reader.isKeyForValue("thisActualColDefault") )
+      {
+         SsColumns.THISACTUAL.setDefaultValue(reader.getStringValue("thisActualColDefault", "A"));
+      }
+      if ( reader.isKeyForValue("etcColDefault") )
+      {
+         SsColumns.ETC.setDefaultValue(reader.getStringValue("etcColDefault", "A"));
+      }
+      int sheetOffsetDefault = 0;
+      if ( reader.isKeyForValue("etcColDefault") )
+      {
+         sheetOffsetDefault = (int)reader.getLongValue("sheetOffsetDefault", 0);
+      }
+      int startRowDefault = 0;
+      if ( reader.isKeyForValue("etcColDefault") )
+      {
+         startRowDefault = (int)reader.getLongValue("startRowDefault", 0);
+      }
+      int endRowDefault = 0;
+      if ( reader.isKeyForValue("etcColDefault") )
+      {
+         endRowDefault = (int)reader.getLongValue("endRowDefault", 0);
+      }
+
+      Reader[] readers = getParameters().getReader().structArray("wpsrs");
+      for ( Reader wpsrReader : readers )
+      {
+         LocalSpreadSheet ss = new LocalSpreadSheet(
+            wpsrReader, 
+            rootDir,
+            sheetOffsetDefault,
+            startRowDefault,
+            endRowDefault);
          ssReferences_.add(ss.filename_);
          spreadsheets_.put(ss.filename_, ss);
       }
@@ -70,7 +121,7 @@ public class WpsrSummaryPanel extends TableSpreadsheet
          for ( int row : table.getRowIterator() )
          {
             SsCell[] cells = table.getCellsForRow(row);
-            SsCell.AddUnique(cells[Columns.RESOURCE.getIndex()], uniqueResource);
+            SsCell.AddUnique(cells[SsColumns.RESOURCE.getIndex()], uniqueResource);
          }         
       }
 
@@ -81,7 +132,7 @@ public class WpsrSummaryPanel extends TableSpreadsheet
          globalResources[ii] = new Resource(uniqueResource.get(ii));
       }
       Resource globalTotal = new Resource("GLOBAL TOTAL");
-      
+
       // Process the valid spreadsheets
       removeAllRows();
       startAddRows();
@@ -90,10 +141,10 @@ public class WpsrSummaryPanel extends TableSpreadsheet
          LocalSpreadSheet ss = spreadsheets_.get(ref);          
          SsTable table = ss.table_;
          ss.resetResource();
-         
+
          // Add the control row
-         TableCell[] controls = new TableCell[Columns.length()];
-         for ( int ci=0; ci<Columns.length(); ci++ )
+         TableCell[] controls = new TableCell[HmiColumns.length()];
+         for ( int ci=0; ci<HmiColumns.length(); ci++ )
          {
             controls[ci] =  new TableCellLabel("");
          }
@@ -104,34 +155,48 @@ public class WpsrSummaryPanel extends TableSpreadsheet
          }
          controls[2] =  new TableCellLabel(ss.status_);
          controls[2].setItalics(true);
-         JButton reloadB = new JButton("Reload");
+         JButton reloadB = new JButton("Edit ...");
          reloadB.addActionListener(new ActionListener() 
          { 
             public void actionPerformed(ActionEvent e) 
             { 
-               ss.load();
-             } 
-           });
-         controls[Columns.length()-1] =  new TableCellButton(reloadB);
-         for ( int ci=0; ci<Columns.length(); ci++ )
+               new Thread(new Runnable()
+               {
+                  @Override
+                  public void run()
+                  {
+                     try
+                     {
+                        Desktop.getDesktop().open(new File(ss.filename_));
+                     }
+                     catch (IOException e1)
+                     {
+                        Log.severe("Could not open file with desktop", e1);
+                     }
+                  }
+               }).start();
+            } 
+         });
+         controls[HmiColumns.length()-1] =  new TableCellButton(reloadB);
+         for ( int ci=0; ci<HmiColumns.length(); ci++ )
          {
             controls[ci].setBlendBackgroundColor(ssColor_);
          }
          addRowOfCells(controls);
-         
+
          //  Add the spreadsheet rows  if the table is valid
          if ( table == null )
          {
             continue;
          }
-         
+
          // Create the summing resources for the spreadsheet
          Resource[] ssResources = new  Resource[uniqueResource.size()];
          for ( int ii=0; ii<ssResources.length; ii++ )
          {
             ssResources[ii] = new Resource(uniqueResource.get(ii));
          }
-         
+
          // Sum up all the rows into spreadsheet and global resources
          for ( int row : table.getRowIterator() )
          {
@@ -147,7 +212,7 @@ public class WpsrSummaryPanel extends TableSpreadsheet
             ss.getResource().sum(cells);
             globalTotal.sum(cells);
          }
-         
+
          // Process each unique resource against the spreadsheet
          for ( Resource resource : ssResources )
          {
@@ -155,11 +220,10 @@ public class WpsrSummaryPanel extends TableSpreadsheet
             {
                continue;
             }
-            TableCell[] tableCells = resource.getTableCells();
-            addRowOfCells(tableCells);            
+            addRowOfCells(resource.getTableCells());            
          }
       }
-      
+
       // Add the global summing for resources
       {  
          addRowOfCells(getTitleRow("RESOURCE TOTAL", totalColor_));         
@@ -169,11 +233,10 @@ public class WpsrSummaryPanel extends TableSpreadsheet
             {
                continue;
             }
-            TableCell[] tableCells = resource.getTableCells();
-            addRowOfCells(tableCells); 
+            addRowOfCells(resource.getTableCells()); 
          }
       }      
-      
+
       // Add the overall global summing
       {  
          addRowOfCells(getTitleRow("WPSR TOTAL", totalColor_));            
@@ -196,7 +259,7 @@ public class WpsrSummaryPanel extends TableSpreadsheet
          cell.setBlendBackgroundColor(totalColor_);
       }
       addRowOfCells(tableCells); 
-      
+
       // All rows added
       stopAddRows();
 
@@ -206,31 +269,41 @@ public class WpsrSummaryPanel extends TableSpreadsheet
 
    private class LocalSpreadSheet implements SsFileModifiedListener
    {      
-      LocalSpreadSheet(Reader reader)
-      {             
-         ssReference_ = reader.getStringValue("file", "");
+      LocalSpreadSheet(
+         Reader reader,
+         String rootDir,
+         int sheetOffsetDefault,
+         int startRowDefault,
+         int endRowDefault)
+      {            
+         reader.setVerbose(false);
          label_ = reader.getStringValue("label", "notset");
          filename_ = reader.getStringValue("file", "");
-         sheetOffset_ = (int)reader.getLongValue("sheetOffset", 0);
-         startRow_ = -1 + (int)reader.getLongValue("startRow", 0);
-         endRow_ = -1 + (int)reader.getLongValue("endRow", 0);
+         filename_ = filename_.replace("ROOTDIR", rootDir);
+         sheetOffset_ = (int)reader.getLongValue("sheetOffset", sheetOffsetDefault);
+         startRow_ = -1 + (int)reader.getLongValue("startRow", startRowDefault);
+         endRow_ = -1 + (int)reader.getLongValue("endRow", endRowDefault);
          resourceCol_= SsTable.ColumnLettersToIndex(reader.getStringValue(
-            Columns.RESOURCE.getResourceKey(), "A"));
+            SsColumns.RESOURCE.getResourceKey(), 
+            SsColumns.RESOURCE.getDefaultValue()));
          budgetCol_ = SsTable.ColumnLettersToIndex(reader.getStringValue(
-            Columns.BUDGET.getResourceKey(), "A"));
+            SsColumns.BUDGET.getResourceKey(), 
+            SsColumns.BUDGET.getDefaultValue()));
          prevActualCol_ = SsTable.ColumnLettersToIndex(reader.getStringValue(
-            Columns.PREVACTUAL.getResourceKey(), "A"));
+            SsColumns.PREVACTUAL.getResourceKey(), 
+            SsColumns.PREVACTUAL.getDefaultValue()));
          thisActualCol_ = SsTable.ColumnLettersToIndex(reader.getStringValue(
-            Columns.THISACTUAL.getResourceKey(), "A"));
+            SsColumns.THISACTUAL.getResourceKey(), 
+            SsColumns.THISACTUAL.getDefaultValue()));
          etcCol_ =  SsTable.ColumnLettersToIndex(reader.getStringValue(
-            Columns.ETC.getResourceKey(), "A")); 
+            SsColumns.ETC.getResourceKey(), 
+            SsColumns.ETC.getDefaultValue())); 
          status_ = "Loading...";
          file_ = SsFile.Create(filename_);
          file_.setFileModifiedListener(this);
          ssTotal_ = new Resource(label_);
-         display(null);
       }
-      
+
       public void resetResource()
       {
          ssTotal_ = new Resource(label_);
@@ -258,49 +331,58 @@ public class WpsrSummaryPanel extends TableSpreadsheet
          bgThread.setDaemon(true);
          bgThread.start(); 
       }  
-      
+
       protected void readAndDisplayTable()
-      {         
-         int startRow = startRow_;
-         int endRow = endRow_;
-         if ( startRow == -1 || endRow == -1 )
-         {
-            SsTable table = new SsTable(file_, sheetOffset_);
-            table.addRow(0,  512);
-            table.addCol(SsTable.ColumnLettersToIndex("C"));
-            table.addCol(SsTable.ColumnLettersToIndex("E"));
-            table.readTable();
-            for ( int row : table.getRowIterator() )
+      { 
+         SsTable table = null;
+         try
+         {       
+            int startRow = startRow_;
+            int endRow = endRow_;
+            String shortName = new File(filename_).getName();
+            if ( startRow == -1 || endRow == -1 )
             {
-               SsCell[] cells = table.getCellsForRow(row);
-               if ( cells[0].toString().contains("ACTIVITIES") )
+               table = new SsTable(file_, sheetOffset_);
+               table.addRow(0,  512);
+               table.addCol(SsTable.ColumnLettersToIndex("C"));
+               table.addCol(SsTable.ColumnLettersToIndex("E"));
+               table.readTable();
+               for ( int row : table.getRowIterator() )
                {
-                  startRow = table.getRowsInSheet()[row] + 1;
+                  SsCell[] cells = table.getCellsForRow(row);
+                  if ( cells[0].toString().contains("ACTIVITIES") )
+                  {
+                     startRow = table.getRowsInSheet()[row] + 1;
+                  }
+                  if ( cells[1].toString().contains("TOTAL") )
+                  {
+                     endRow = table.getRowsInSheet()[row] - 1;
+                  }
                }
-               if ( cells[1].toString().contains("TOTAL") )
-               {
-                  endRow = table.getRowsInSheet()[row] - 1;
-               }
+               Log.info(shortName + " auto detect rows " + (startRow+1) + " to " + (endRow+1));
             }
-            Log.info(ssReference_ + " auto detect rows " + (startRow+1) + " to " + (endRow+1));
+            else
+            {
+               Log.info(shortName + " loading rows " + (startRow+1) + " to " + (endRow+1));
+            }
+            table = new SsTable(file_, sheetOffset_);
+            table.addRow(startRow,  endRow);
+            table.addCol(resourceCol_);
+            table.addCol(budgetCol_);
+            table.addCol(prevActualCol_);
+            table.addCol(thisActualCol_);
+            table.addCol(etcCol_);
+            table.readTable();
+            status_ = "";
          }
-         else
+         catch (Exception e)
          {
-            Log.info(ssReference_ + " loading rows " + (startRow+1) + " to " + (endRow+1));
+            status_ = "error";
+            table = null;
          }
-         
-         SsTable table = new SsTable(file_, sheetOffset_);
-         table.addRow(startRow,  endRow);
-         table.addCol(resourceCol_);
-         table.addCol(budgetCol_);
-         table.addCol(prevActualCol_);
-         table.addCol(thisActualCol_);
-         table.addCol(etcCol_);
-         table.readTable();
-         status_ = "";
          display(table);
       }
-      
+
       private void display(final SsTable table)
       {
          javax.swing.SwingUtilities.invokeLater(new Runnable()
@@ -309,26 +391,17 @@ public class WpsrSummaryPanel extends TableSpreadsheet
             public void run()
             {
                table_ = table;
-               displaySpreadSheet(ssReference_, LocalSpreadSheet.this);
-            }         
-         });
-      }
-      
-      @Override
-      public void fileModified()
-      {
-         javax.swing.SwingUtilities.invokeLater(new Runnable()
-         {
-            @Override
-            public void run()
-            {
-               status_ = "modified";
-               displaySpreadSheet(ssReference_, LocalSpreadSheet.this);
+               displaySpreadSheet(filename_, LocalSpreadSheet.this);
             }         
          });
       }
 
-      private String ssReference_;
+      @Override
+      public void fileModified()
+      {
+         load();
+      }
+
       private String label_;
       private String filename_;
       private int    sheetOffset_;
@@ -340,30 +413,30 @@ public class WpsrSummaryPanel extends TableSpreadsheet
       private int    thisActualCol_;
       private int    etcCol_; 
       private SsTable table_;
-      
+
       private String status_;
       private SsFile file_;
       private Resource ssTotal_;
    }
-   
+
    private TableCell[] getTitleRow(String title, Color color)
    {      
       // Add the control row
-      TableCell[] controls = new TableCell[Columns.length()];
-      for ( int ci=0; ci<Columns.length(); ci++ )
+      TableCell[] controls = new TableCell[HmiColumns.length()];
+      for ( int ci=0; ci<HmiColumns.length(); ci++ )
       {
          controls[ci] =  new TableCellLabel("");
       }
       controls[0] = new TableCellLabel(title);
       controls[0].setBold(true);
-      for ( int ci=0; ci<Columns.length(); ci++ )
+      for ( int ci=0; ci<HmiColumns.length(); ci++ )
       {
          controls[ci].setBlendBackgroundColor(color);
       }  
       return controls;
    }
 
-   
+
    private ArrayList<String> ssReferences_;
    private HashMap<String, LocalSpreadSheet> spreadsheets_;
    private Color ssColor_ = new Color(0, 204, 102);

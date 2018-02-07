@@ -33,7 +33,7 @@ public abstract class SsFile
       return readSheet_;
    }
    
-   public SsCell[][] readTable(int sheet, SsTable ssTable)
+   public SsCell[][] readTable(int sheet, SsTable ssTable) throws Exception
    {
       int[] rows = ssTable.getRowsInSheet();
       int[] cols = ssTable.getColsInSheet();
@@ -62,6 +62,7 @@ public abstract class SsFile
       catch (Exception e)
       {
          Log.severe("Error reading excel", e);
+         throw(e);
       }
       finally
       {
@@ -76,7 +77,7 @@ public abstract class SsFile
       return table;
    }
    
-   public SsCell[][] readTable(String sheet, SsTable ssTable)
+   public SsCell[][] readTable(String sheet, SsTable ssTable) throws Exception
    {
       int[] rows = ssTable.getRowsInSheet();
       int[] cols = ssTable.getColsInSheet();
@@ -88,7 +89,6 @@ public abstract class SsFile
             table[row][col] = new SsCell();
          }
       }
-      if ( !isOk() ) return table;
       try
       {
          if ( fileMonitor_ != null )
@@ -105,6 +105,8 @@ public abstract class SsFile
       }
       catch (Exception e)
       {
+         Log.severe("Error reading excel", e);
+         throw(e);
       }
       finally
       {
@@ -182,7 +184,7 @@ public abstract class SsFile
             }
             try
             {
-               Thread.sleep(3000);
+               Thread.sleep(1500);
             }
             catch (InterruptedException e)
             {
