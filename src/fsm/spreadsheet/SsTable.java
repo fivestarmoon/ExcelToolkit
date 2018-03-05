@@ -2,75 +2,14 @@ package fsm.spreadsheet;
 
 import java.util.ArrayList;
 
-import org.apache.poi.ss.util.CellReference;
-
 public class SsTable
 {
-   public static int ColumnLettersToIndex(String colLetters)
-   {
-      return CellReference.convertColStringToIndex(colLetters);
-   }
-   public static String ColumnIndexToLetters(int colIndex)
-   {
-      return CellReference.convertNumToColString(colIndex);
-   }
    
    
-   public SsTable(SsFile file, String sheet)
+   public SsTable()
    {
-      file_ = file;
-      sheetRefIsString_ = true;
-      setSheetString(new String(sheet));
       rows_ = new ArrayList<Integer>();
       cols_ = new ArrayList<Integer>();
-      cells_ = new SsCell[0][0];
-   }
-
-   public SsTable(SsFile file, int sheet)
-   {
-      file_ = file;
-      sheetRefIsString_ = false;
-      setSheetInt(sheet);
-      rows_ = new ArrayList<Integer>();
-      cols_ = new ArrayList<Integer>();
-      cells_ = new SsCell[0][0];
-   }
-   
-   // --- PRIVATE
-
-   public SsFile getFile()
-   {
-      return file_;
-   }
-
-   public boolean isSheetRefIsString()
-   {
-      return sheetRefIsString_;
-   }
-
-   public String getSheetString()
-   {
-      return sheetString_;
-   }
-
-   public void setSheetString(String sheetString_)
-   {
-      this.sheetRefIsString_ = true;
-      this.sheetString_ = sheetString_;
-      this.sheetInt_ = 0;
-      cells_ = new SsCell[0][0];
-   }
-
-   public int getSheetInt()
-   {
-      return sheetInt_;
-   }
-
-   public void setSheetInt(int sheetInt_)
-   {
-      this.sheetRefIsString_ = false;
-      this.sheetString_ = "";
-      this.sheetInt_ = sheetInt_;
       cells_ = new SsCell[0][0];
    }
    
@@ -144,23 +83,6 @@ public class SsTable
       return cols;
    }
    
-   public void readTable() throws Exception
-   {
-      if ( sheetRefIsString_ )
-      {
-         cells_ = file_.readTable(sheetString_, this);
-      }
-      else
-      {
-         cells_ = file_.readTable(sheetInt_, this);
-      }
-   }
-   
-   public void writeTable()
-   {
-      file_.writeTable(getRowsInSheet(), getColsInSheet(), cells_);      
-   }
-   
    public SsCell getCell(int row, int col)
    {
       if ( row < 0 || row >= rows_.size() )
@@ -173,8 +95,13 @@ public class SsTable
       }
       return cells_[row][col];
    }
+   
    public SsCell[] getCellsForRow(int row)
    {
+      if ( row < 0 || row >= rows_.size() )
+      {
+         return new SsCell[0];
+      }
       SsCell[] cells = cells_[row];
       return cells;
    }
@@ -183,17 +110,7 @@ public class SsTable
    public String toString()
    {
       StringBuilder stringbuilder = new StringBuilder();
-      stringbuilder.append(file_.getFile().getName());
-      stringbuilder.append("[");
-      if ( sheetRefIsString_ )
-      {
-         stringbuilder.append(sheetString_);
-      }
-      else
-      {
-         stringbuilder.append(sheetInt_);
-      }
-      stringbuilder.append("] rows [");
+      stringbuilder.append("rows [");
       for ( int ii : rows_ )
       {
          stringbuilder.append(ii + " ");
@@ -201,18 +118,14 @@ public class SsTable
       stringbuilder.append("] rows [");
       for ( int ii : cols_ )
       {
-         stringbuilder.append(ColumnIndexToLetters(ii) + " ");
+         stringbuilder.append(SsCell.ColumnIndexToLetters(ii) + " ");
       }
       stringbuilder.append("]");
       return stringbuilder.toString();
    }
    
    // --- PROTECTED
-
-   protected SsFile file_;
-   protected boolean sheetRefIsString_;
-   protected String sheetString_;
-   protected int sheetInt_;
+   
    protected ArrayList<Integer> rows_;
    protected ArrayList<Integer> cols_;
    protected SsCell[][] cells_;

@@ -1,11 +1,15 @@
 package fsm.spreadsheet;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.Calendar;
 
 import fsm.common.Log;
 
-public abstract class SsFile
+public abstract class SsFile implements AutoCloseable
 {
    public static SsFile Create(String filename)
    {
@@ -15,12 +19,6 @@ public abstract class SsFile
    public SsFile(File file)
    {
       file_ = file;
-      readSheet_ = "";
-   }
-   
-   public void setFileModifiedListener(SsFileModifiedListener l)
-   {
-      fileModifiedListener_ = l;
    }
    
    public File getFile()
@@ -28,186 +26,109 @@ public abstract class SsFile
       return file_;
    }
    
-   public String getReadSheet()
+   public void read() throws FileNotFoundException, IOException
    {
-      return readSheet_;
+      try ( FileInputStream fis = new FileInputStream(file_) )
+      {
+         readImp(fis);
+         fis.close();
+      }
    }
    
-   public SsCell[][] readTable(int sheet, SsTable ssTable) throws Exception
+   public void write() throws FileNotFoundException, IOException
+   {
+      try ( FileOutputStream fos = new FileOutputStream(file_) )
+      {
+         writeImp(fos);
+         fos.close();
+      }
+   }
+   
+   public abstract int sheetNameToIndex(String name);
+   public abstract String sheetIndexToName(int index);
+   public abstract void openSheet(int sheetIndex) throws Exception;
+   
+   public void getTable(SsTable ssTable)
    {
       int[] rows = ssTable.getRowsInSheet();
       int[] cols = ssTable.getColsInSheet();
-      SsCell[][] table = new SsCell[rows.length][cols.length];
+      ssTable.cells_ = new SsCell[rows.length][cols.length];
       for ( int row=0; row < rows.length; row++ )
       {
          for ( int col=0; col < cols.length; col++ )
          {
-            table[row][col] = new SsCell();
+            ssTable.cells_[row][col] = new SsCell();
          }
       }
       try
       {
-         if ( fileMonitor_ != null )
-         {
-            fileMonitor_.stop();
-         }
-         fileMonitor_ = new FileMonitor(file_, fileModifiedListener_);
-         open();
-         readSheet_ = this.sheetIndexToName(sheet);
-         readTableImp(sheet,
-                      rows, 
-                      cols, 
-                      table);
+         getTableImp(rows, cols, ssTable.cells_);
       }
       catch (Exception e)
       {
          Log.severe("Error reading excel", e);
-         throw(e);
       }
-      finally
-      {
-         try
-         {
-            close();
-         }
-         catch (Exception e)
-         {
-         }
-      }
-      return table;
+      return;
    }
    
-   public SsCell[][] readTable(String sheet, SsTable ssTable) throws Exception
+   public void setTable(SsTable ssTable)
    {
-      int[] rows = ssTable.getRowsInSheet();
-      int[] cols = ssTable.getColsInSheet();
-      SsCell[][] table = new SsCell[rows.length][cols.length];
-      for ( int row=0; row < rows.length; row++ )
-      {
-         for ( int col=0; col < cols.length; col++ )
-         {
-            table[row][col] = new SsCell();
-         }
-      }
       try
       {
-         if ( fileMonitor_ != null )
-         {
-            fileMonitor_.stop();
-         }
-         fileMonitor_ = new FileMonitor(file_, fileModifiedListener_);
-         open();
-         readSheet_ = sheet;
-         readTableImp(sheetNameToIndex(sheet),
-                      rows, 
-                      cols, 
-                      table);
+         setTableImp(ssTable.getRowsInSheet(), ssTable.getColsInSheet(), ssTable.cells_);
       }
       catch (Exception e)
       {
-         Log.severe("Error reading excel", e);
-         throw(e);
+         Log.severe("Error writing excel", e);
       }
-      finally
-      {
-         try
-         {
-            close();
-         }
-         catch (Exception e)
-         {
-         }
-      }
-      return table;
-   }
-   public void writeTable(int[] rows, int[] cols, SsCell[][] cells_)
-   {
-      
+      return;      
    }
    
-   public void stopFileListener() throws Exception
+   public void setDateCell(String cellLocation, Calendar date)
    {
-      if ( fileMonitor_ != null )
+      try
       {
-         fileMonitor_.stop();
+         setDateCellImp(cellLocation, date);
+      }
+      catch (Exception e)
+      {
+         Log.severe("Error writing excel", e);
       }
    }
+   
+   public void duplicateSheet(String name)
+   {
+      try
+      {
+         duplicateSheetImp(name);
+      }
+      catch (Exception e)
+      {
+         Log.severe("Error duplicating sheet excel", e);
+      }
+      return;          
+   }
+   
+   public abstract void close();
    
    
    // --- PROTECTED
 
-   protected abstract boolean isOk();
-   protected abstract void open() throws FileNotFoundException;
-   protected abstract int sheetNameToIndex(String name);
-   protected abstract String sheetIndexToName(int index);
-   protected abstract void close() throws Exception;
+   protected abstract void readImp(FileInputStream fis) throws FileNotFoundException;
+   protected abstract void writeImp(FileOutputStream fos) throws FileNotFoundException;
 
-   protected abstract void readTableImp(int sheetIndex,
-                                        int[] row,
-                                        int[] col,
-                                        SsCell[][] cells);
+   protected abstract void getTableImp(int[] row,
+                                       int[] col,
+                                       SsCell[][] cells) throws Exception;
 
-   protected abstract void writeTableImp(int sheetIndex,
-                                         int[] rows,
-                                         int[] cols,
-                                         SsCell[][] cells);
+   protected abstract void setTableImp(int[] rows,
+                                       int[] cols,
+                                       SsCell[][] cells) throws Exception;
+   public abstract void setDateCellImp(String cellLocation, Calendar date) throws Exception;
+   public abstract void duplicateSheetImp(String name) throws Exception;
    
    // --- PRIVATE
    
-   private static class FileMonitor implements Runnable
-   {
-      public FileMonitor(File file, SsFileModifiedListener l)
-      {
-         file_ = file;
-         fileModifiedListener_ = l;
-         if ( fileModifiedListener_ != null )
-         {
-            Thread thread = new Thread(this);
-            thread.setDaemon(true);
-            thread.start();
-         }
-      }
-      @Override
-      public void run()
-      {
-         long timeUpdated = file_.lastModified();
-         while ( true)
-         {
-            if ( fileModifiedListener_ == null )
-            {
-               break;
-            }
-            long newModified = file_.lastModified();
-            if ( newModified != timeUpdated )
-            {
-               break;
-            }
-            try
-            {
-               Thread.sleep(1500);
-            }
-            catch (InterruptedException e)
-            {
-            }
-         }
-         SsFileModifiedListener fileModifiedListener = fileModifiedListener_;
-         if ( fileModifiedListener != null )
-         {
-            fileModifiedListener.fileModified();
-         }
-         
-      }  
-      public void stop()
-      {
-         fileModifiedListener_ = null;
-      }    
-      private File file_;
-      private SsFileModifiedListener fileModifiedListener_;
-   }
-   
    private File file_;
-   private String readSheet_;
-   private SsFileModifiedListener fileModifiedListener_;
-   private FileMonitor fileMonitor_;
 
 }

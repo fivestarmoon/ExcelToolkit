@@ -62,12 +62,19 @@ public abstract  class TableSpreadsheet extends JPanel
 
    public void destroyTable()
    {
+      destroyPanel();
       window_ = null;
+   }
+   
+   public Window getWindow()
+   {
+      return window_;
    }
    
    // --- PROTECTED
 
    protected abstract void createPanelBG();
+   protected abstract void destroyPanel();
 
    final protected Parameters getParameters()
    {

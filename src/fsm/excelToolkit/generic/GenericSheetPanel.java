@@ -11,6 +11,8 @@ import java.util.HashMap;
 
 import javax.swing.JButton;
 
+import csm.common.utils.FileModifiedListener;
+import csm.common.utils.FileModifiedMonitor;
 import fsm.common.Log;
 import fsm.common.parameters.Reader;
 import fsm.excelToolkit.hmi.table.TableCell;
@@ -20,7 +22,6 @@ import fsm.excelToolkit.hmi.table.TableCellSpreadsheet;
 import fsm.excelToolkit.hmi.table.TableSpreadsheet;
 import fsm.spreadsheet.SsCell;
 import fsm.spreadsheet.SsFile;
-import fsm.spreadsheet.SsFileModifiedListener;
 import fsm.spreadsheet.SsTable;
 
 @SuppressWarnings("serial")
@@ -58,6 +59,17 @@ public class GenericSheetPanel extends TableSpreadsheet
          spreadsheets_.get(ref).load();
       }
    }
+   
+   @Override
+   protected void destroyPanel()
+   {
+      for ( String ref : ssReferences_ )
+      {
+         LocalSpreadSheet ss = spreadsheets_.get(ref);
+         ss.destroy();
+      }
+      
+   }
 
    // --- PRIVATE
 
@@ -80,7 +92,7 @@ public class GenericSheetPanel extends TableSpreadsheet
          controls[0] =  new TableCellLabel(ss.label_);
          if ( table != null )
          {
-            controls[1] =  new TableCellLabel(ss.table_.getFile().getReadSheet());
+            controls[1] =  new TableCellLabel(ss.getSheetName());
          }
          controls[2] =  new TableCellLabel(ss.status_);
          controls[2].setItalics(true);
@@ -143,7 +155,7 @@ public class GenericSheetPanel extends TableSpreadsheet
       displayPanel();
    }
 
-   private class LocalSpreadSheet implements SsFileModifiedListener
+   private class LocalSpreadSheet implements FileModifiedListener
    {      
       LocalSpreadSheet(Reader reader)
       {            
@@ -191,13 +203,13 @@ public class GenericSheetPanel extends TableSpreadsheet
             columns_ = new int[temp.length];
             for ( int ii=0; ii<temp.length; ii++ )
             {
-               columns_[ii] = SsTable.ColumnLettersToIndex(temp[ii]);
+               columns_[ii] = SsCell.ColumnLettersToIndex(temp[ii]);
             }
          }
          else
          {
-            int columnStart = SsTable.ColumnLettersToIndex(reader.getStringValue("columnStart", "A"));
-            int columnEnd = SsTable.ColumnLettersToIndex(reader.getStringValue("columnEnd", "A"));
+            int columnStart = SsCell.ColumnLettersToIndex(reader.getStringValue("columnStart", "A"));
+            int columnEnd = SsCell.ColumnLettersToIndex(reader.getStringValue("columnEnd", "A"));
             columns_ = new int[Math.max(0, columnEnd-columnStart+1)];
             for ( int ii=0; ii<columns_.length; ii++ )
             {
@@ -206,8 +218,21 @@ public class GenericSheetPanel extends TableSpreadsheet
             
          }
          status_ = "Loading...";
-         file_ = SsFile.Create(filename_);
-         file_.setFileModifiedListener(this);
+      }
+
+      public void destroy()
+      {   
+         ssReference_ = null;
+         if ( monitor_ != null )
+         {
+            monitor_.stop();
+            monitor_ = null;
+         }
+      }
+
+      public String getSheetName()
+      {
+         return sheetName_;
       }
 
       public int getNumColumns()
@@ -217,6 +242,11 @@ public class GenericSheetPanel extends TableSpreadsheet
 
       public void load()
       {
+         if ( monitor_ != null )
+         {
+            monitor_.stop();
+            monitor_ = null;
+         }
          table_ = null;
          status_ = "Loading...";
          display(null);
@@ -235,15 +265,7 @@ public class GenericSheetPanel extends TableSpreadsheet
 
       protected void readAndDisplayTable()
       {
-         SsTable table = null;
-         if ( useSheetIndex_ )
-         {
-            table = new SsTable(file_, sheetIndex_);
-         }
-         else
-         {
-            table = new SsTable(file_, sheetName_);
-         }
+         SsTable table = new SsTable();
          for ( int row : rows_ )
          {
             table.addRow(row);
@@ -252,13 +274,25 @@ public class GenericSheetPanel extends TableSpreadsheet
          {
             table.addCol(column);
          }
-         try
+         try ( SsFile file = SsFile.Create(filename_))
          {
-            table.readTable();
+            file.read();
+            if ( useSheetIndex_ )
+            {
+               file.openSheet(sheetIndex_);
+               sheetName_ = file.sheetIndexToName(sheetIndex_);
+            }
+            else
+            {
+               file.openSheet(file.sheetNameToIndex(sheetName_));
+            }
+            file.getTable(table);
             status_ = "";
+            file.close();
          }
          catch (Exception e)
          {
+            Log.severe("Failed to load sheet", e);
             status_ = "error";      
             table = null;      
          }
@@ -274,6 +308,10 @@ public class GenericSheetPanel extends TableSpreadsheet
             {
                table_ = table;
                displaySpreadSheet(ssReference_, LocalSpreadSheet.this);
+               if ( table_ != null )
+               {
+                  monitor_ = new FileModifiedMonitor(new File(filename_), LocalSpreadSheet.this);
+               }
             }         
          });
       }
@@ -281,6 +319,11 @@ public class GenericSheetPanel extends TableSpreadsheet
       @Override
       public void fileModified()
       {
+         if ( ssReference_ == null )
+         {
+            Log.info("file modified ignored beacuse panel destroyed!");
+            return;
+         }
          load();
       }
 
@@ -295,7 +338,8 @@ public class GenericSheetPanel extends TableSpreadsheet
       private SsTable   table_;
 
       private String status_;
-      private SsFile file_;
+      
+      private FileModifiedMonitor monitor_;
    }
 
 

@@ -98,6 +98,10 @@ implements WindowListener, DropTargetListener
       try
       {
          params_ = new Parameters(absolutePath);
+         if ( table_ != null )
+         {
+            table_.destroyTable();
+         }
          String type = params_.getReader().getStringValue("type", "");
          if ( "wpsr_summary".equalsIgnoreCase(type) )
          {

@@ -3,9 +3,15 @@ package fsm.spreadsheet;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.Calendar;
+import org.apache.poi.hssf.util.CellReference;
 import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.DateUtil;
 import org.apache.poi.ss.usermodel.FormulaEvaluator;
+import org.apache.poi.xssf.usermodel.XSSFCell;
+import org.apache.poi.xssf.usermodel.XSSFFormulaEvaluator;
 import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -16,12 +22,62 @@ import fsm.spreadsheet.SsCell.Type;
 public class SsXlsx extends SsFile
 {
    @Override
-   public void open() throws FileNotFoundException
+   public int sheetNameToIndex(String name)
+   {
+      return wb_.getSheetIndex(name);
+   }
+   
+   @Override
+   public String sheetIndexToName(int index)
+   {
+      return wb_.getSheetName(index);
+   }
+
+   @Override
+   public void openSheet(int sheetIndex) throws Exception
+   {
+      sheet_ = wb_.getSheetAt(sheetIndex); 
+      if ( sheet_ == null )
+      {
+         throw new Exception("Sheet index " + sheetIndex + " not found");
+      }
+   }
+
+   @Override
+   public void close()
    {
       try
       {
-         fis_ = new FileInputStream(getFile());
-         wb_ = new XSSFWorkbook(fis_);
+         if ( wb_ != null )
+         {
+            wb_.close();
+         }
+      }
+      catch (IOException e)
+      {
+         Log.severe("Problems closing", e);
+      }
+      finally
+      {
+         wb_ = null;
+         formulaEvaluator_ = null;
+      }      
+   }
+   
+   // --- PROTECTED
+   
+   // "C:\\Users\\Kurt\\Documents\\Kurt\\eclipse.workspace\\ExcelToolkitScratch\\temp.xlsx"
+   SsXlsx(String filename)
+   { 
+      super(new File(filename));
+   }
+   
+   @Override
+   protected void readImp(FileInputStream fis) throws FileNotFoundException
+   {
+      try
+      {
+         wb_ = new XSSFWorkbook(fis);
 
          // Evaluate cell type
          formulaEvaluator_= wb_.getCreationHelper().createFormulaEvaluator();
@@ -40,59 +96,32 @@ public class SsXlsx extends SsFile
    }
    
    @Override
-   public boolean isOk()
-   {
-      return ( formulaEvaluator_ != null );
-   }
-   
-   @Override
-   protected int sheetNameToIndex(String name)
-   {
-      return wb_.getSheetIndex(name);
-   }
-   
-   @Override
-   protected String sheetIndexToName(int index)
-   {
-      return wb_.getSheetName(index);
-   }
-
-   @Override
-   public void close() throws Exception
+   protected void writeImp(FileOutputStream fos) throws FileNotFoundException
    {
       try
       {
-         wb_.close();
-         fis_.close();
+         wb_.write(fos);
       }
       catch (IOException e)
       {
-         Log.severe("Problems closing", e);
-      }
-      finally
-      {
-         fis_ = null;
-         wb_ = null;
-         formulaEvaluator_ = null;
+         Log.severe("Failed to read XLSX " + getFile().getAbsolutePath(), e);
+         try
+         {
+            close();
+         }
+         catch (Exception e1)
+         {
+         }
       }      
    }
    
-   // --- PROTECTED
-   
-   // "C:\\Users\\Kurt\\Documents\\Kurt\\eclipse.workspace\\ExcelToolkitScratch\\temp.xlsx"
-   SsXlsx(String filename)
-   { 
-      super(new File(filename));
-   }
 
    @Override
-   protected void readTableImp(int sheetIndex, int[] rows, int[] cols, SsCell[][] table)
-   {
-      XSSFSheet sheet = wb_.getSheetAt(sheetIndex); 
-      
+   protected void getTableImp(int[] rows, int[] cols, SsCell[][] table) throws Exception
+   {      
       for ( int row=0; row < rows.length; row++ )
       {
-         XSSFRow  ssRow = sheet.getRow(rows[row]);
+         XSSFRow  ssRow = sheet_.getRow(rows[row]);
          if ( ssRow == null )
          {
             continue;
@@ -139,15 +168,95 @@ public class SsXlsx extends SsFile
    }
 
    @Override
-   public void writeTableImp(int sheet, int[] rows, int[] cols, SsCell[][] cells_)
+   public void setTableImp(int[] rows, int[] cols, SsCell[][] cells) throws Exception
    {
-      // TODO Implement writeTableImp()     
+      if ( sheet_ == null )
+      {
+         throw new Exception("Sheet needs to be opened first");
+      }
+      for ( int row=0; row < rows.length; row++ )
+      {
+         XSSFRow ssRow = sheet_.getRow(rows[row]);
+         if ( ssRow == null )
+         {
+            continue;
+         }
+         for ( int col=0; col < cols.length; col++ )
+         {
+            Cell cell = ssRow.getCell(cols[col]);
+            if ( cell == null )
+            {
+               continue;
+            }
+            if (cells[row][col].getType() == SsCell.Type.NUMERIC )
+            {
+               cell.setCellValue(cells[row][col].getValue());
+            }
+         }
+      }
+      XSSFFormulaEvaluator.evaluateAllFormulaCells(wb_);
+   }
+   
+   @Override
+   public void duplicateSheetImp(String newName) throws Exception
+   {     
+      if ( sheet_ == null )
+      {
+         throw new Exception("Sheet needs to be opened first");
+      }
+      XSSFSheet sheet = wb_.cloneSheet(wb_.getSheetIndex(sheet_.getSheetName()));
+      if ( sheet == null )
+      {
+         throw new Exception("Failed to duplicate sheet");
+      }
+      
+      String sheetName = sheet.getSheetName();
+      wb_.setSheetOrder(sheetName, 0);
+      int offset = 0;
+      String newSheetName = new String(newName);
+      while (true)
+      {
+         if ( offset == 0 )
+         {
+            if ( wb_.getSheet(newSheetName) == null )
+            {
+               break;
+            }
+         }
+         else
+         {
+            newSheetName = newName + "-" + offset;
+            if ( wb_.getSheet(newSheetName) == null )
+            {
+               break;
+            }
+         }
+         offset++;
+      }
+      wb_.setSheetName(0, newSheetName);
+      wb_.setFirstVisibleTab(0);
+      wb_.setSelectedTab(0);
+      wb_.setActiveSheet(0);
+   }
+   @Override
+   public void setDateCellImp(String cellLocation, Calendar date) throws Exception
+   {       
+      if ( sheet_ == null )
+      {
+         throw new Exception("Sheet needs to be opened first");
+      }
+      CellReference cr = new CellReference(cellLocation);
+      XSSFRow row = sheet_.getRow(cr.getRow());
+      XSSFCell cell = row.getCell(cr.getCol());
+      double d = DateUtil.getExcelDate(date, false); //get double value f
+      cell.setCellValue((int)d);  //get int value of the double
+      //cell.setCellValue(date);
+      XSSFFormulaEvaluator.evaluateAllFormulaCells(wb_);
    }
    
    // --- PRIVATE
    
-   private FileInputStream fis_;
    private XSSFWorkbook wb_;
+   private XSSFSheet sheet_;
    private FormulaEvaluator formulaEvaluator_;
-
 }

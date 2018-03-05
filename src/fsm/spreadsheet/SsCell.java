@@ -2,6 +2,8 @@ package fsm.spreadsheet;
 
 import java.util.ArrayList;
 
+import org.apache.poi.ss.util.CellReference;
+
 public class SsCell
 {
    public enum Type
@@ -10,6 +12,15 @@ public class SsCell
       STRING,
       READONLY      
    };
+   
+   public static int ColumnLettersToIndex(String colLetters)
+   {
+      return CellReference.convertColStringToIndex(colLetters);
+   }
+   public static String ColumnIndexToLetters(int colIndex)
+   {
+      return CellReference.convertNumToColString(colIndex);
+   }
    
    public SsCell(double value)
    {
