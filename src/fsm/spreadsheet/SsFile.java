@@ -13,7 +13,14 @@ public abstract class SsFile implements AutoCloseable
 {
    public static SsFile Create(String filename)
    {
-      return new SsXlsx(filename);
+      if ( filename.toLowerCase().endsWith("xlsx") )
+      {         
+         return new SsXlsx(filename);
+      }
+      else
+      {
+         return new SsXls(filename);
+      }
    }
    
    public SsFile(File file)

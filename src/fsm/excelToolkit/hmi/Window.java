@@ -20,6 +20,7 @@ import fsm.common.Log;
 import fsm.common.parameters.Parameters;
 import fsm.excelToolkit.generic.GenericSheetPanel;
 import fsm.excelToolkit.hmi.table.TableSpreadsheet;
+import fsm.excelToolkit.jira.JiraSummaryPanel;
 import fsm.excelToolkit.wpsr.WpsrSummaryPanel;
 
 @SuppressWarnings("serial")
@@ -111,6 +112,16 @@ implements WindowListener, DropTargetListener
             title_ = new File(absolutePath).getName();
             showContent(new JLabel("Loading WPSR summary ..."));
             table_ = new WpsrSummaryPanel();
+            table_.createTable(this, params_); // eventually calls showContent         
+         }
+         else if ( "jira_summary".equalsIgnoreCase(type) )
+         {
+            setSize(new Dimension(
+               (int) params_.getReader().getLongValue("width",  700),
+               (int) params_.getReader().getLongValue("height",  700)));
+            title_ = new File(absolutePath).getName();
+            showContent(new JLabel("Loading JIRA summary ..."));
+            table_ = new JiraSummaryPanel();
             table_.createTable(this, params_); // eventually calls showContent         
          }
          else if ( "spreadsheets".equalsIgnoreCase(type) )
