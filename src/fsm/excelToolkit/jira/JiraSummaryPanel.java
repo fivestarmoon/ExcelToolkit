@@ -120,9 +120,11 @@ public class JiraSummaryPanel extends TableSpreadsheet
       }
       headers[0] =  new TableCellLabel(spreadSheet_.getFileName());
       headers[0].setBlendBackgroundColor(totalColor_);
-      headers[1] =  new TableCellLabel(spreadSheet_.getStatus());
-      headers[1].setItalics(true);
+      headers[1] =  new TableCellLabel(spreadSheet_.getSheetName());
       headers[1].setBlendBackgroundColor(totalColor_);
+      headers[2] =  new TableCellLabel(spreadSheet_.getStatus());
+      headers[2].setItalics(true);
+      headers[2].setBlendBackgroundColor(totalColor_);
       addRowOfCells(headers);
 
       // Process the valid spreadsheets
