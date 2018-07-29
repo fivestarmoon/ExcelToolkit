@@ -118,45 +118,38 @@ class JiraSpreadSheet implements FileModifiedListener
          file.openSheet(sheetOffset_);
          readSheetName_ = file.sheetIndexToName(sheetOffset_);
          
-         int startRow = startRow_;
-         int endRow = endRow_;
+         startRow_ = -1;
          String shortName = file.getFile().getName();
-         if ( startRow == -1 || endRow == -1 )
          {
             table = new SsTable();
             table.addRow(0,  512);
             table.addCol(SsCell.ColumnLettersToIndex("A"));
             file.getTable(table);
+            endRow_ = table.getRowsInSheet().length;
             for ( int row : table.getRowIterator() )
             {
                SsCell[] cells = table.getCellsForRow(row);
                if ( cells[0].toString().contains("Assignee") )
                {
-                  startRow = table.getRowsInSheet()[row] + 1;
-                  startRow_ = startRow;
+                  startRow_ =  table.getRowsInSheet()[row] + 1;
                }
                if ( cells[0].toString().contains("Generated at") )
                {
-                  endRow = table.getRowsInSheet()[row] - 1;
-                  endRow_ = endRow;
+                  endRow_ = table.getRowsInSheet()[row] - 1;
                }
             }
-            Log.info(shortName + " auto detect rows " + (startRow+1) + " to " + (endRow+1));
+            Log.info(shortName + " auto detect rows " + (startRow_+1) + " to " + (endRow_+1));
          }
-         else
-         {
-            Log.info(shortName + " loading rows " + (startRow+1) + " to " + (endRow+1));
-         }
-         if ( startRow == -1 )
+         if ( startRow_ == -1 )
          {
             throw new Exception("Failed to find start row where Assignee column contains 'Assigned'");
          }
-         if ( endRow == -1 )
+         if ( endRow_ == -1 )
          {
             throw new Exception("Failed to find start row where first column contains 'Generated at'");
          }
          table = new SsTable();
-         table.addRow(startRow,  endRow);
+         table.addRow(startRow_,  endRow_);
          table.addCol(resourceCol_);
          table.addCol(chargeCodeCol_);
          table.addCol(budgetCol_);

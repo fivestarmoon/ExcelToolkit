@@ -162,7 +162,7 @@ class WpsrSpreadSheet implements FileModifiedListener
          panel,
          "Prepare WPSR for end-of-week?", 
          JOptionPane.YES_NO_OPTION);
-      if (result == JOptionPane.NO_OPTION) 
+      if (result != JOptionPane.YES_OPTION) 
       {
          return;
       }
