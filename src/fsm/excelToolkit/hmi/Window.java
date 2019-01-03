@@ -1,6 +1,7 @@
 package fsm.excelToolkit.hmi
 ;
 import java.awt.Container;
+import java.awt.Desktop;
 import java.awt.Dimension;
 import java.awt.Point;
 import java.awt.datatransfer.DataFlavor;
@@ -13,11 +14,15 @@ import java.awt.dnd.DropTargetEvent;
 import java.awt.dnd.DropTargetListener;
 import java.awt.event.*;
 import java.io.File;
+import java.io.IOException;
 
 import javax.swing.*;
 
+import fsm.common.FsmResources;
 import fsm.common.Log;
 import fsm.common.parameters.Parameters;
+import fsm.common.utils.FileModifiedListener;
+import fsm.common.utils.FileModifiedMonitor;
 import fsm.excelToolkit.generic.GenericSheetPanel;
 import fsm.excelToolkit.hmi.table.TableSpreadsheet;
 import fsm.excelToolkit.jira.JiraSummaryPanel;
@@ -25,7 +30,7 @@ import fsm.excelToolkit.wpsr.WpsrSummaryPanel;
 
 @SuppressWarnings("serial")
 public class Window extends JFrame
-implements WindowListener, DropTargetListener
+implements WindowListener, DropTargetListener, FileModifiedListener
 {
    public void createAndShowGUI()
    {
@@ -43,14 +48,19 @@ implements WindowListener, DropTargetListener
 
       // Create the menu
       JMenuBar menuBar = new JMenuBar();
+      
       // File menu
       JMenu fileMenu = new JMenu("File");
       fileMenu.setMnemonic(KeyEvent.VK_F);
-      fileMenu.setMnemonic(KeyEvent.VK_F);
-      JMenuItem openItem = new JMenuItem("Open ...");
-      openItem.setMnemonic(KeyEvent.VK_O);
-      openItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_O, InputEvent.CTRL_MASK));
-      openItem.addActionListener(new ActionListener()
+      
+      // File > Open
+      {
+         JMenuItem menuItem = new JMenuItem(
+            "Open JSON file ...", 
+            FsmResources.getIconResource("file_empty.png"));
+         menuItem.setMnemonic(KeyEvent.VK_O);
+         menuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_O, InputEvent.CTRL_MASK));
+         menuItem.addActionListener(new ActionListener()
          {
             @Override
             public void actionPerformed(ActionEvent e)
@@ -63,20 +73,101 @@ implements WindowListener, DropTargetListener
                }
             }         
          });
-      fileMenu.add(openItem);
-      JMenuItem quitItem = new JMenuItem("Exit");
-      quitItem.setMnemonic(KeyEvent.VK_X);
-      quitItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_X, InputEvent.CTRL_MASK));
-      quitItem.addActionListener(new ActionListener()
+         fileMenu.add(menuItem);
+      }
+      
+      // File > Reload
       {
-         @Override
-         public void actionPerformed(ActionEvent e)
+         JMenuItem menuItem = new JMenuItem(
+            "Reload JSON file", 
+            FsmResources.getIconResource("program_refresh.png"));
+         menuItem.setMnemonic(KeyEvent.VK_R);
+         menuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_R, InputEvent.CTRL_MASK));
+         menuItem.addActionListener(new ActionListener()
          {
-            Window.this.dispatchEvent(new WindowEvent(Window.this, WindowEvent.WINDOW_CLOSING));
-         }      
-      });
-      fileMenu.add(quitItem);
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+               if ( lastFile_.length() > 0 )
+               {
+                  processNewParameterFile(lastFile_);
+               }
+            }         
+         });
+         fileMenu.add(menuItem);
+      }
+      
+      // File > Edit
+      {
+         JMenuItem menuItem = new JMenuItem(
+            "Edit JSON file ...", 
+            FsmResources.getIconResource("file_paste.png"));
+         menuItem.setMnemonic(KeyEvent.VK_E);
+         menuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_E, InputEvent.CTRL_MASK));
+         menuItem.addActionListener(new ActionListener()
+         {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+               try
+               {
+                  if ( lastFile_.length() > 0 )
+                  {
+                     Desktop.getDesktop().open(new File(lastFile_));
+                  }
+               }
+               catch (IOException e1)
+               {
+                  Log.severe("Could not open file with desktop", e1);
+               }
+            }         
+         });
+         fileMenu.add(menuItem);
+      }
+      
+      // File > Exit
+      {
+         JMenuItem menuItem = new JMenuItem(
+            "Exit", 
+            FsmResources.getIconResource("program_exit.png"));
+         menuItem.setMnemonic(KeyEvent.VK_X);
+         menuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_X, InputEvent.CTRL_MASK));
+         menuItem.addActionListener(new ActionListener()
+         {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+               Window.this.dispatchEvent(new WindowEvent(Window.this, WindowEvent.WINDOW_CLOSING));
+            }      
+         });
+         fileMenu.add(menuItem);
+      }
+      
+      // Help menu
+      JMenu aboutMenu = new JMenu("Help");
+      aboutMenu.setMnemonic(KeyEvent.VK_A);
+      
+      // Help > About
+      {
+         JMenuItem menuItem = new JMenuItem(
+            "About");
+         menuItem.addActionListener(new ActionListener()
+         {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+               JOptionPane.showMessageDialog(Window.this, "Excel Toolkit\nKurt Hagen");
+            }      
+         });
+         aboutMenu.add(menuItem);
+      }      
+      
+      // Add menus to the bar
       menuBar.add(fileMenu);
+      menuBar.add(Box.createHorizontalGlue());
+      menuBar.add(aboutMenu);
+      
+      // Add menu bar
       setJMenuBar(menuBar);
 
       // Display the window.
@@ -98,6 +189,12 @@ implements WindowListener, DropTargetListener
    {   
       try
       {
+         if ( fileModifiedMonitor_ != null )
+         {
+            fileModifiedMonitor_.stop();
+            fileModifiedMonitor_ = null;
+         }         
+         lastFile_ = absolutePath;
          params_ = new Parameters(absolutePath);
          if ( table_ != null )
          {
@@ -144,7 +241,7 @@ implements WindowListener, DropTargetListener
          showContent(new JLabel("Error in json " + absolutePath));
          return;
       }
-
+      fileModifiedMonitor_ = new FileModifiedMonitor(new File(absolutePath), this);
    }
 
    @Override
@@ -247,8 +344,20 @@ implements WindowListener, DropTargetListener
       catch (Exception e)
       {
          Log.severe("Drop exception: ", e);
-      }
-      
+      }      
+   }
+
+   @Override
+   public void fileModified()
+   {
+      SwingUtilities.invokeLater(
+         new Runnable()
+         {
+            public void run()
+            {
+               processNewParameterFile(lastFile_);
+            }
+         });
    }
    
    // PROTECTED
@@ -257,5 +366,7 @@ implements WindowListener, DropTargetListener
    
    private Parameters params_;
    private TableSpreadsheet table_;
-   private String title_;
+   private String title_ = "";
+   private String lastFile_ = "";
+   private FileModifiedMonitor fileModifiedMonitor_ = null;
 }
