@@ -11,12 +11,25 @@ import javax.swing.table.AbstractTableModel;
 import javax.swing.table.TableCellEditor;
 import javax.swing.table.TableCellRenderer;
 
+import fsm.common.Log;
 import fsm.common.parameters.Parameters;
 import fsm.excelToolkit.hmi.Window;
 
 @SuppressWarnings("serial")
 public abstract  class TableSpreadsheet extends JPanel
 {
+   public static class TableException extends Exception
+   {
+      public TableException(String exception)
+      {
+         super(exception);
+      }
+      public TableException(String string, Exception exception)
+      {
+         super(string, exception);
+      }
+   }
+   
    public TableSpreadsheet()
    {      
       super(new GridLayout(1,0));
@@ -52,7 +65,14 @@ public abstract  class TableSpreadsheet extends JPanel
          @Override
          public void run()
          {
-            createPanelBG();
+            try
+            {
+               createPanelBG();
+            }
+            catch (TableException e)
+            {
+               Log.severe("Failed to create table", e);
+            }
          }
 
       });
@@ -73,12 +93,17 @@ public abstract  class TableSpreadsheet extends JPanel
    
    // --- PROTECTED
 
-   protected abstract void createPanelBG();
+   protected abstract void createPanelBG() throws TableException;
    protected abstract void destroyPanel();
 
    final protected Parameters getParameters()
    {
       return params_;
+   }
+
+   protected int getAutoResizeMode()
+   {
+      return JTable.AUTO_RESIZE_LAST_COLUMN;
    }
 
    final protected void setColumns(String [] columns, boolean editable)
@@ -90,7 +115,7 @@ public abstract  class TableSpreadsheet extends JPanel
 
       table_ = new MyTable(new MyTableModel());
       table_.setFillsViewportHeight(true);
-      table_.setAutoResizeMode(JTable.AUTO_RESIZE_LAST_COLUMN);
+      table_.setAutoResizeMode(getAutoResizeMode());
       displayPanel();
    }
    

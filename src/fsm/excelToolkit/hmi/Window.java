@@ -23,9 +23,11 @@ import fsm.common.Log;
 import fsm.common.parameters.Parameters;
 import fsm.common.utils.FileModifiedListener;
 import fsm.common.utils.FileModifiedMonitor;
+import fsm.excelToolkit.Main;
 import fsm.excelToolkit.generic.GenericSheetPanel;
 import fsm.excelToolkit.hmi.table.TableSpreadsheet;
 import fsm.excelToolkit.jira.JiraSummaryPanel;
+import fsm.excelToolkit.loading.LoadingSummaryPanel;
 import fsm.excelToolkit.wpsr.WpsrSummaryPanel;
 
 @SuppressWarnings("serial")
@@ -144,8 +146,30 @@ implements WindowListener, DropTargetListener, FileModifiedListener
       }
       
       // Help menu
-      JMenu aboutMenu = new JMenu("Help");
-      aboutMenu.setMnemonic(KeyEvent.VK_A);
+      JMenu helpMenu = new JMenu("Help");
+      helpMenu.setMnemonic(KeyEvent.VK_H);
+      
+      // Help > View Log
+      {
+         JMenuItem menuItem = new JMenuItem(
+            "View log ...");
+         menuItem.addActionListener(new ActionListener()
+         {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+               try
+               {
+                  Desktop.getDesktop().open(new File(Main.LogFileName_s));
+               }
+               catch (IOException e1)
+               {
+                  Log.severe("Could not open file with desktop", e1);
+               }
+            }      
+         });
+         helpMenu.add(menuItem);
+      }      
       
       // Help > About
       {
@@ -159,13 +183,13 @@ implements WindowListener, DropTargetListener, FileModifiedListener
                JOptionPane.showMessageDialog(Window.this, "Excel Toolkit\nKurt Hagen");
             }      
          });
-         aboutMenu.add(menuItem);
+         helpMenu.add(menuItem);
       }      
       
       // Add menus to the bar
       menuBar.add(fileMenu);
       menuBar.add(Box.createHorizontalGlue());
-      menuBar.add(aboutMenu);
+      menuBar.add(helpMenu);
       
       // Add menu bar
       setJMenuBar(menuBar);
@@ -211,6 +235,16 @@ implements WindowListener, DropTargetListener, FileModifiedListener
             table_ = new WpsrSummaryPanel();
             table_.createTable(this, params_); // eventually calls showContent         
          }
+         else if ( "loading".equalsIgnoreCase(type) )
+         {
+            setSize(new Dimension(
+               (int) params_.getReader().getLongValue("width",  700),
+               (int) params_.getReader().getLongValue("height",  700)));
+            title_ = new File(absolutePath).getName();
+            showContent(new JLabel("Loading spreadsheet loading ..."));
+            table_ = new LoadingSummaryPanel();
+            table_.createTable(this, params_); // eventually calls showContent         
+         }
          else if ( "jira_summary".equalsIgnoreCase(type) )
          {
             setSize(new Dimension(
@@ -238,7 +272,7 @@ implements WindowListener, DropTargetListener, FileModifiedListener
       }
       catch (Exception e)
       {
-         showContent(new JLabel("Error in json " + absolutePath));
+         showContent(new JLabel("Error in json " + absolutePath + ". See log for more information."));
          return;
       }
       fileModifiedMonitor_ = new FileModifiedMonitor(new File(absolutePath), this);

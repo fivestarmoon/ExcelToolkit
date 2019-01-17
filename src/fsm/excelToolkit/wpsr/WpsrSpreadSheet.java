@@ -362,11 +362,15 @@ class WpsrSpreadSheet implements FileModifiedListener
          public void run()
          {
             table_ = table;
-            WpsrSpreadSheet.this.parentPanel_.displaySpreadSheet(filename_, WpsrSpreadSheet.this);
-            if ( table != null )
+            WpsrSummaryPanel panel = WpsrSpreadSheet.this.parentPanel_;
+            if ( panel != null )
             {
-               readyForNextWeek_ = true;
-               monitor_ = new FileModifiedMonitor(new File(filename_), WpsrSpreadSheet.this);
+               panel.displayTable();
+               if ( table != null )
+               {
+                  readyForNextWeek_ = true;
+                  monitor_ = new FileModifiedMonitor(new File(filename_), WpsrSpreadSheet.this);
+               }
             }
          }         
       });

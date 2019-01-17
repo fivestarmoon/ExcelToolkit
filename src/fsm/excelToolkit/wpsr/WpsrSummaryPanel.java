@@ -129,7 +129,7 @@ public class WpsrSummaryPanel extends TableSpreadsheet
 
    // --- PRIVATE
 
-   void displaySpreadSheet(String ssReference, WpsrSpreadSheet sheet)
+   void displayTable()
    {
       // Determine the resource names to sum against
       ArrayList<String> uniqueResourceTemp = new ArrayList<String>();
