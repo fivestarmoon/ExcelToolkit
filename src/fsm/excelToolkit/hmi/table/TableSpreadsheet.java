@@ -39,7 +39,6 @@ public abstract  class TableSpreadsheet extends JPanel
       editable_ = false;
       columns_ = new String[0];
       rows_ = new ArrayList<TableCell[]>();
-      delayFireRows_ = false;
 
       javax.swing.SwingUtilities.invokeLater(new Runnable()
       {
@@ -106,57 +105,30 @@ public abstract  class TableSpreadsheet extends JPanel
       return JTable.AUTO_RESIZE_LAST_COLUMN;
    }
 
-   final protected void setColumns(String [] columns, boolean editable)
+   final protected void setColumns(String [] columns, int columnSize[], boolean editable)
    {
       editable_ = editable;
 
       columns_ = columns.clone();
+      columnSize_ = columnSize.clone();
       rows_ = new ArrayList<TableCell[]>();
-
-      table_ = new MyTable(new MyTableModel());
-      table_.setFillsViewportHeight(true);
-      table_.setAutoResizeMode(getAutoResizeMode());
-      displayPanel();
-   }
-   
-   final protected void setColumnPrefferredSize(int col, int size)
-   {
-      table_.getColumnModel().getColumn(col).setPreferredWidth(size);
-   }
-
-
-
-   final public void removeAllRows()
-   {
-      int numRows = rows_.size();
-      rows_.clear();
-      if ( numRows > 0 )
-      {
-         ((MyTableModel)table_.getModel()).fireTableRowsDeleted(0, numRows-1);
-      }
+      
+      buildTable();
    }
 
    final protected void startAddRows()
    {
-      delayFireRows_ = true;
+      rows_.clear();
    }
 
    final protected void addRowOfCells(TableCell[] rowOfCells)
    {
       rows_.add(rowOfCells);
-      if ( !delayFireRows_ )
-      {
-         ((MyTableModel)table_.getModel()).fireTableRowsInserted(rows_.size()-1, rows_.size()-1);
-      }
    }
 
    final protected void stopAddRows()
-   {
-      if ( !delayFireRows_ )
-      {
-         ((MyTableModel)table_.getModel()).fireTableRowsInserted(rows_.size()-1, rows_.size()-1);
-      }
-      delayFireRows_ = false;
+   {  
+      buildTable();
    }
 
    final protected void displayPanel()
@@ -185,8 +157,21 @@ public abstract  class TableSpreadsheet extends JPanel
    private JTable table_;
    private boolean editable_;
    private String [] columns_;
+   private int[] columnSize_;
    private ArrayList<TableCell[]> rows_;
-   private boolean delayFireRows_;
+   
+   private void buildTable()
+   {
+      table_ = new MyTable(new MyTableModel());
+      table_.setFillsViewportHeight(true);
+      table_.setAutoResizeMode(getAutoResizeMode());
+      for ( int col=0; col<columnSize_.length; col++ )
+      {
+         table_.getColumnModel().getColumn(col).setPreferredWidth(columnSize_[col]);
+      }
+      displayPanel();
+      
+   }
 
    @SuppressWarnings("rawtypes")
    private class MyTable extends JTable

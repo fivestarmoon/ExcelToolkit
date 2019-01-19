@@ -23,10 +23,13 @@ class LoadingSpreadSheet implements FileModifiedListener
    LoadingSpreadSheet(
       LoadingSummaryPanel panel, 
       Reader reader,
-      String[] resources)
+      String[] resources,
+      boolean enableAutoReload)
    {    
       status_ = "JSON error";
       readSheetName_ = "-";    
+      enableAutoReload_ = enableAutoReload;
+      isModified_ = false;
       try
       {
          parentPanel_ = panel;
@@ -107,11 +110,6 @@ class LoadingSpreadSheet implements FileModifiedListener
       return filename_;
    }
 
-   public boolean isTableValid()
-   {
-      return table_ != null;
-   }
-
    public String getName()
    {
       return name_;
@@ -120,6 +118,16 @@ class LoadingSpreadSheet implements FileModifiedListener
    public String getStatus()
    {
       return status_;
+   }
+
+   public boolean isTableValid()
+   {
+      return table_ != null;
+   }
+   
+   public boolean isFileModified()
+   {
+      return isModified_;
    }
 
    public ArrayList<SsCell[]> getLoading(String res, LoadingMonth[] months)
@@ -189,6 +197,7 @@ class LoadingSpreadSheet implements FileModifiedListener
       {
          monitor_.stop();
          monitor_ = null;
+         isModified_ = false;
       }
    }
 
@@ -227,7 +236,15 @@ class LoadingSpreadSheet implements FileModifiedListener
          Log.info("file modified ignored beacuse panel destroyed!");
          return;
       }
-      loadBG();
+      isModified_ = true;
+      if ( enableAutoReload_ )
+      {
+         loadBG();
+      }
+      else
+      {
+         display(table_);         
+      }
    }
 
    protected void readAndDisplayTable()
@@ -240,6 +257,7 @@ class LoadingSpreadSheet implements FileModifiedListener
             monitor_.stop();
             monitor_ = null;
          }
+         isModified_ = false;
          file.read();
          file.openSheet(file.sheetNameToIndex(sheet_));
          
@@ -279,6 +297,7 @@ class LoadingSpreadSheet implements FileModifiedListener
                if ( table != null )
                {
                   monitor_ = new FileModifiedMonitor(new File(filename_), LoadingSpreadSheet.this);
+                  isModified_ = false;
                }
             }
          }         
@@ -289,7 +308,7 @@ class LoadingSpreadSheet implements FileModifiedListener
 
    private String name_;
    private String filename_;
-   private String    sheet_;
+   private String sheet_;
    private int    startRow_;
    private int    endRow_;
    private int    startCol_;
@@ -302,4 +321,6 @@ class LoadingSpreadSheet implements FileModifiedListener
    private String readSheetName_;
    private HashMap<String,ArrayList<String>> resourceMapping_;   
    private FileModifiedMonitor monitor_;
+   private boolean enableAutoReload_;
+   private boolean isModified_;
 }

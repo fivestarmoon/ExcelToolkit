@@ -17,6 +17,7 @@ import java.io.File;
 import java.io.IOException;
 
 import javax.swing.*;
+import javax.swing.filechooser.FileNameExtensionFilter;
 
 import fsm.common.FsmResources;
 import fsm.common.Log;
@@ -68,6 +69,8 @@ implements WindowListener, DropTargetListener, FileModifiedListener
             public void actionPerformed(ActionEvent e)
             {
                JFileChooser chooser = new JFileChooser(".");
+               chooser.addChoosableFileFilter(new FileNameExtensionFilter("Excel tool kit files", "extk"));
+               chooser.addChoosableFileFilter(new FileNameExtensionFilter("Text files", "txt"));
                int returnVal = chooser.showOpenDialog(Window.this);
                if(returnVal == JFileChooser.APPROVE_OPTION)
                {

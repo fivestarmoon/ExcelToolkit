@@ -12,6 +12,7 @@ import java.util.HashMap;
 import javax.swing.JButton;
 import javax.swing.JTable;
 
+import fsm.common.FsmResources;
 import fsm.common.Log;
 import fsm.common.parameters.Reader;
 import fsm.excelToolkit.hmi.table.TableCell;
@@ -110,17 +111,15 @@ public class LoadingSummaryPanel extends TableSpreadsheet
             }
          }
       }
-      setColumns(columnTitle, false);
       columnPreferredSize[HmiColumns.LABEL.getIndex()] = 130;
       columnPreferredSize[HmiColumns.RESOURCE.getIndex()] = 130;
       columnPreferredSize[HmiColumns.ROW_SUM.getIndex()] = 100;
-      for ( int ii=0; ii<columnTitle.length; ii++ )
-      {
-         setColumnPrefferredSize(ii, columnPreferredSize[ii]);
-      }
+      setColumns(columnTitle, columnPreferredSize, false);
       
       // Read some optional parameters
-      warningThreshold_ = reader.getLongValue("warningThreshold", 25);
+      warningThreshold_ = (int) reader.getLongValue("warningThreshold", 25);
+      showGlobalTotal_ = reader.getBooleanValue("showGlobalTotal", false);
+      enableAutoReload_ = reader.getBooleanValue("enableAutoReload", true);
 
       // Load the information on the WPSR spreadsheets
       Reader[] readers = getParameters().getReader().structArray("spreadsheets");
@@ -129,7 +128,8 @@ public class LoadingSummaryPanel extends TableSpreadsheet
          LoadingSpreadSheet ss = new LoadingSpreadSheet(
             this,
             ssReader, 
-            resourceLabel_);
+            resourceLabel_,
+            enableAutoReload_);
          spreadsheets_.put(ss.getFilename(), ss);
          ssReferences_.add(ss.getFilename());
       }
@@ -170,10 +170,9 @@ public class LoadingSummaryPanel extends TableSpreadsheet
          globalResources[ii] = new Resource(resourceLabel_[ii], NumberOfMonths);
       }
       
-      Resource globalTotal = new Resource("GLOBAL TOTAL", NumberOfMonths);
+      Resource globalTotal = new Resource("All Resources", NumberOfMonths);
       
       // Process the valid spreadsheets
-      removeAllRows();
       startAddRows();
       for ( String ref : ssReferences_ )
       {
@@ -193,32 +192,49 @@ public class LoadingSummaryPanel extends TableSpreadsheet
          else
          {
             controls[1] =  new TableCellLabel(ss.getStatus());
+            controls[1].setItalics(true);
          }
-         controls[1].setItalics(true);
-         
-         JButton editB = new JButton("Edit ...");
-         editB.addActionListener(new ActionListener() 
-         { 
-            public void actionPerformed(ActionEvent e) 
+
+         if ( !enableAutoReload_ && ss.isFileModified()  )
+         {   
+            
+            JButton reloadB = new JButton("Reload",
+               FsmResources.getIconResource("program_refresh.png"));
+            reloadB.addActionListener(new ActionListener() 
             { 
-               new Thread(new Runnable()
-               {
-                  @Override
-                  public void run()
+               public void actionPerformed(ActionEvent e) 
+               { 
+                  ss.loadBG();
+               } 
+            });
+            controls[2] =  new TableCellButton(reloadB);
+         }
+         else
+         {      
+            JButton editB = new JButton("Edit ...");
+            controls[2] =  new TableCellButton(editB);
+            editB.addActionListener(new ActionListener() 
+            { 
+               public void actionPerformed(ActionEvent e) 
+               { 
+                  new Thread(new Runnable()
                   {
-                     try
+                     @Override
+                     public void run()
                      {
-                        Desktop.getDesktop().open(new File(ss.getFilename()));
+                        try
+                        {
+                           Desktop.getDesktop().open(new File(ss.getFilename()));
+                        }
+                        catch (IOException e1)
+                        {
+                           Log.severe("Could not open file with desktop", e1);
+                        }
                      }
-                     catch (IOException e1)
-                     {
-                        Log.severe("Could not open file with desktop", e1);
-                     }
-                  }
-               }).start();
-            } 
-         });
-         controls[2] =  new TableCellButton(editB);
+                  }).start();
+               } 
+            });
+         }
          for ( int ci=0; ci<HmiColumns.length(months_.length); ci++ )
          {
             controls[ci].setBlendBackgroundColor(ssColor_);
@@ -238,7 +254,7 @@ public class LoadingSummaryPanel extends TableSpreadsheet
             ArrayList<SsCell[]> loading =  ss.getLoading(res, months_);
             for (SsCell[] cells : loading )
             {
-               addRowOfCells(convertToRow(cells));
+               addRowOfCells(convertToRow(cells, warningThreshold_));
                globalResources[ii].sumif(cells);
                globalTotal.sum(cells);
             }
@@ -254,18 +270,17 @@ public class LoadingSummaryPanel extends TableSpreadsheet
             {
                continue;
             }
-            addRowOfCells(convertToRow(resource.getCells())); 
+            addRowOfCells(convertToRow(resource.getCells(), warningThreshold_)); 
          }
       }      
 
       // Add the overall global summing
-//      TableCell[] tableCells = convertToRow(globalTotal.getCells());
-//      tableCells[0].setBold(true);
-//      for ( TableCell cell : tableCells )
-//      {
-//         cell.setBlendBackgroundColor(totalColor_);
-//      }
-//      addRowOfCells(tableCells); 
+      if ( showGlobalTotal_ )
+      {
+         addRowOfCells(getTitleRow("GLOBAL TOTAL", totalColor_));  
+         TableCell[] tableCells = convertToRow(globalTotal.getCells(), (int) 1e6);
+         addRowOfCells(tableCells); 
+      }
 
       // All rows added
       stopAddRows();
@@ -274,7 +289,7 @@ public class LoadingSummaryPanel extends TableSpreadsheet
       displayPanel();
    }
    
-   private TableCell[] convertToRow(SsCell[] cells)
+   private TableCell[] convertToRow(SsCell[] cells, int warningThreshold)
    {
       TableCell[] tableCells = new TableCell[cells.length];
       for ( int ii=0; ii<cells.length; ii++ )
@@ -288,7 +303,7 @@ public class LoadingSummaryPanel extends TableSpreadsheet
          {
             tableCells[ii] = new TableCellSpreadsheet(Round(cells[ii].getValue())); 
             if ( ii != HmiColumns.ROW_SUM.getIndex()
-                     && cells[ii].getValue() > warningThreshold_ )
+                     && cells[ii].getValue() > warningThreshold )
             {
                tableCells[ii].setBlendBackgroundColor(varianceWarning_);
             }
@@ -325,7 +340,9 @@ public class LoadingSummaryPanel extends TableSpreadsheet
    private String[] resourceLabel_;
    private ArrayList<String> ssReferences_;
    private HashMap<String, LoadingSpreadSheet> spreadsheets_;
-   private double warningThreshold_ = 25;
+   private int warningThreshold_ = 25;
+   private boolean showGlobalTotal_ = false;
+   private boolean enableAutoReload_ = true;
    private Color ssColor_ = new Color(0, 204, 102);
    private Color totalColor_ = new Color(255, 179, 102);
    private Color varianceWarning_ = new Color(255, 0, 0, 64);

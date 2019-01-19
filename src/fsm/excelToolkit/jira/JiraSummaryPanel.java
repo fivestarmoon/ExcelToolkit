@@ -29,8 +29,7 @@ public class JiraSummaryPanel extends TableSpreadsheet
       {
          columnTitle[ii] = columns[ii].getColumnTitle();
       }
-      setColumns(columnTitle, false);
-      setColumnPrefferredSize(0, 100);
+      setColumns(columnTitle, new int[0], false);
 
       // Load the default values for columns and rows if available
       Reader reader = getParameters().getReader();
@@ -108,7 +107,6 @@ public class JiraSummaryPanel extends TableSpreadsheet
       }
       Resource globalTotal = new Resource("GLOBAL TOTAL");
 
-      removeAllRows();
       startAddRows();
 
       // Add some column headers

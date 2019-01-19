@@ -52,8 +52,7 @@ public class GenericSheetPanel extends TableSpreadsheet
       {
          columns_[ii] = Integer.toString(ii+1);
       }
-      setColumns(columns_, true);
-      setColumnPrefferredSize(0, 100);
+      setColumns(columns_, new int[0], true);
       for ( String ref : ssReferences_ )
       {
          spreadsheets_.get(ref).load();
@@ -76,7 +75,6 @@ public class GenericSheetPanel extends TableSpreadsheet
    private void displaySpreadSheet(String ssReference, LocalSpreadSheet sheet)
    {
       // Process the valid spreadsheets
-      removeAllRows();
       startAddRows();
       for ( String ref : ssReferences_ )
       {
