@@ -49,6 +49,14 @@ public class LoadingSummaryPanel extends TableSpreadsheet
       }
       try
       {
+         etcStartDate_ = new LoadingMonth(reader.getStringValue("etcStartDate", ""));
+      }
+      catch (LoadingMonthException e)
+      {
+         etcStartDate_ = new LoadingMonth(startDate_); 
+      }
+      try
+      {
          endDate_ = new LoadingMonth(reader.getStringValue("endDate", ""));
       }
       catch (LoadingMonthException e)
@@ -103,7 +111,7 @@ public class LoadingSummaryPanel extends TableSpreadsheet
          {
             try
             {
-               columnTitle[ii] = new LoadingMonth(startDate_, HmiColumns.columnIndexToMonthIdx(ii)).toString();
+               columnTitle[ii] = new LoadingMonth(startDate_, HmiColumns.columnIndexToMonthIdx(ii)).toPrettyString();
             }            
             catch ( LoadingMonthException e )
             {
@@ -302,10 +310,19 @@ public class LoadingSummaryPanel extends TableSpreadsheet
          else
          {
             tableCells[ii] = new TableCellSpreadsheet(Round(cells[ii].getValue())); 
-            if ( ii != HmiColumns.ROW_SUM.getIndex()
-                     && cells[ii].getValue() > warningThreshold )
+            if ( HmiColumns.isMonth(ii) )
             {
-               tableCells[ii].setBlendBackgroundColor(varianceWarning_);
+               int monthIndex = HmiColumns.columnIndexToMonthIdx(ii);
+               int diffMonths = LoadingMonth.DiffInMonths(months_[monthIndex], etcStartDate_);
+               if ( diffMonths <= 0 )
+               {
+                  tableCells[ii].setBlendBackgroundColor(actualColor_);
+               }
+               else if (cells[ii].getValue() > warningThreshold)
+               {
+                  tableCells[ii].setBlendBackgroundColor(varianceWarning_);
+               }
+               
             }
          }
       }
@@ -335,6 +352,7 @@ public class LoadingSummaryPanel extends TableSpreadsheet
    }
 
    private LoadingMonth startDate_;
+   private LoadingMonth etcStartDate_;
    private LoadingMonth endDate_;
    private LoadingMonth[] months_;
    private String[] resourceLabel_;
@@ -345,6 +363,7 @@ public class LoadingSummaryPanel extends TableSpreadsheet
    private boolean enableAutoReload_ = true;
    private Color ssColor_ = new Color(0, 204, 102);
    private Color totalColor_ = new Color(255, 179, 102);
+   private Color actualColor_ = new Color(64, 64, 64, 64);
    private Color varianceWarning_ = new Color(255, 0, 0, 64);
 
 }

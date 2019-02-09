@@ -163,7 +163,7 @@ implements WindowListener, DropTargetListener, FileModifiedListener
             {
                try
                {
-                  Desktop.getDesktop().open(new File(Main.LogFileName_s));
+                  Desktop.getDesktop().open(new File(Main.GetLogFileName_s()));
                }
                catch (IOException e1)
                {

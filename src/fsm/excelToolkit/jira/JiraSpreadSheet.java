@@ -124,7 +124,7 @@ class JiraSpreadSheet implements FileModifiedListener
          {
             table = new SsTable();
             table.addRow(0,  512);
-            table.addCol(SsCell.ColumnLettersToIndex("A"));
+            table.addCol(resourceCol_);
             file.getTable(table);
             endRow_ = table.getRowsInSheet().length;
             for ( int row : table.getRowIterator() )
@@ -143,7 +143,7 @@ class JiraSpreadSheet implements FileModifiedListener
          }
          if ( startRow_ == -1 )
          {
-            throw new Exception("Failed to find start row where Assignee column contains 'Assigned'");
+            throw new Exception("Failed to find start row where resourceCol column contains 'Assignee'");
          }
          if ( endRow_ == -1 )
          {

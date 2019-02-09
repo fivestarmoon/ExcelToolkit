@@ -10,11 +10,24 @@ import fsm.excelToolkit.hmi.Window;
 
 public class Main
 {
-
-   public static final String LogFileName_s = "ExcelToolkit.log";
+   
+   public static String GetLogFileName_s()
+   {
+      return LogFileName_s;
+   }
 
    public static void main(final String[] args)
    {
+      if ( args.length >= 1 )
+      {
+         File newFile = new File(args[0]);
+         if ( newFile.isFile() )
+         {
+            String files[] = new String[1];
+            files[0] = newFile.getAbsolutePath();
+            LogFileName_s = files[0] + ".log";
+         }
+      }
       Log.Init(new File(LogFileName_s));
       Log.info("Starting ...");
 
@@ -55,5 +68,9 @@ public class Main
          }
       });
    }
+   
+   // --- PRIVATE
+
+   private static String LogFileName_s = "ExcelToolkit.log";
 
 }
