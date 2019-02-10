@@ -43,6 +43,14 @@ public class Resource
    {
       return used_;
    }
+   public void setActuals(double actuals)
+   {
+      sum_[SsColumns.ACTUAL.getIndex()] = actuals;
+   }
+   public void addActuals(double actuals)
+   {
+      sum_[SsColumns.ACTUAL.getIndex()] += actuals;
+   }
    
    public TableCell[] getTableCells()
    {

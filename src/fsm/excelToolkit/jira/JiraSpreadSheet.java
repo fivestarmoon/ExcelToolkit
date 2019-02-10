@@ -31,6 +31,7 @@ class JiraSpreadSheet implements FileModifiedListener
       timeConversion_ = timeConversion;
       status_ = "Loading...";
       readSheetName_ = "";
+      readSheets_ = new String[0];
       startRow_ = -1;
       endRow_ = -1;
    }
@@ -94,6 +95,16 @@ class JiraSpreadSheet implements FileModifiedListener
       return readSheetName_;
    }
 
+   public void setSheetName(String sheet)
+   {
+      readSheetName_ = sheet;
+   }
+   
+   public String[] getSheets()
+   {      
+      return readSheets_;
+   }
+
    @Override
    public void fileModified()
    {
@@ -116,14 +127,22 @@ class JiraSpreadSheet implements FileModifiedListener
             monitor_ = null;
          }
          file.read();
-         file.openSheet(sheetOffset_);
-         readSheetName_ = file.sheetIndexToName(sheetOffset_);
+         if ( readSheetName_.length() == 0 )
+         {
+            file.openSheet(0);
+            readSheetName_ = file.sheetIndexToName(sheetOffset_);
+         }
+         else
+         {
+            file.openSheet(file.sheetNameToIndex(readSheetName_));
+         }
+         readSheets_ = file.getSheets();
          
          startRow_ = -1;
          String shortName = file.getFile().getName();
          {
             table = new SsTable();
-            table.addRow(0,  512);
+            table.addRow(0, file.getNumberOfRows()-1);
             table.addCol(resourceCol_);
             file.getTable(table);
             endRow_ = table.getRowsInSheet().length;
@@ -188,7 +207,7 @@ class JiraSpreadSheet implements FileModifiedListener
          public void run()
          {
             table_ = table;
-            JiraSpreadSheet.this.parentPanel_.displaySpreadSheet(filename_, JiraSpreadSheet.this);
+            JiraSpreadSheet.this.parentPanel_.displaySpreadSheet();
             if ( table != null )
             {
                monitor_ = new FileModifiedMonitor(new File(filename_), JiraSpreadSheet.this);
@@ -208,8 +227,10 @@ class JiraSpreadSheet implements FileModifiedListener
    private int    actualCol_;
    private int    etcCol_; 
    private double timeConversion_;
+   
    private SsTable table_;
    private String  status_;
    private String  readSheetName_;   
+   private String[] readSheets_;
    private FileModifiedMonitor monitor_;
 }

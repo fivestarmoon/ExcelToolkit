@@ -33,12 +33,15 @@ public class WpsrSummaryPanel extends TableSpreadsheet
    public void createPanelBG()
    {  
       String[] columnTitle = new String[HmiColumns.length()];
+      int[] columnPreferredSize = new int[columnTitle.length];
       HmiColumns[] columns = HmiColumns.values();
       for ( int ii=0; ii<HmiColumns.length(); ii++ )
       {
          columnTitle[ii] = columns[ii].getColumnTitle();
+         columnPreferredSize[ii] = 75;
       }
-      setColumns(columnTitle, new int[0], false);
+      columnPreferredSize[HmiColumns.RESOURCE.getIndex()] = 175;
+      setColumns(columnTitle, columnPreferredSize, false);
 
       // Load the default values for columns and rows if available
       Reader reader = getParameters().getReader();

@@ -1,11 +1,17 @@
 package fsm.excelToolkit.jira;
 
 import java.awt.Color;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import javax.swing.JButton;
+import javax.swing.JOptionPane;
+
 import fsm.common.parameters.Reader;
 import fsm.excelToolkit.hmi.table.TableCell;
+import fsm.excelToolkit.hmi.table.TableCellButton;
 import fsm.excelToolkit.hmi.table.TableCellLabel;
 import fsm.excelToolkit.hmi.table.TableSpreadsheet;
 import fsm.spreadsheet.SsCell;
@@ -24,12 +30,15 @@ public class JiraSummaryPanel extends TableSpreadsheet
    public void createPanelBG()
    {  
       String[] columnTitle = new String[HmiColumns.length()];
+      int[] columnPreferredSize = new int[columnTitle.length];
       HmiColumns[] columns = HmiColumns.values();
       for ( int ii=0; ii<HmiColumns.length(); ii++ )
       {
          columnTitle[ii] = columns[ii].getColumnTitle();
+         columnPreferredSize[ii] = 75;
       }
-      setColumns(columnTitle, new int[0], false);
+      columnPreferredSize[HmiColumns.RESOURCE.getIndex()] = 175;
+      setColumns(columnTitle, columnPreferredSize, false);
 
       // Load the default values for columns and rows if available
       Reader reader = getParameters().getReader();
@@ -63,6 +72,13 @@ public class JiraSummaryPanel extends TableSpreadsheet
          estimateCol,
          timeConversion);
       spreadSheet_.loadBG();
+      
+      actuals_ = null;
+      if ( reader.isKeyForStruct("actuals") )
+      {
+         actuals_ = new ActualsSpreadSheet(this, reader.struct("actuals"), resourceOrder_);
+         actuals_.loadBG();
+      }
    }
    
    @Override
@@ -73,7 +89,7 @@ public class JiraSummaryPanel extends TableSpreadsheet
 
    // --- PRIVATE
 
-   void displaySpreadSheet(String ssReference, JiraSpreadSheet sheet)
+   void displaySpreadSheet()
    {
       // Determine the resource names to sum against
       ArrayList<String> uniqueResourceTemp = new ArrayList<String>();
@@ -107,6 +123,13 @@ public class JiraSummaryPanel extends TableSpreadsheet
       }
       Resource globalTotal = new Resource("GLOBAL TOTAL");
 
+      // Determine if the is an alternate spreadsheet for actuals
+      SsTable actualsTable = null;
+      if ( actuals_ != null )
+      {
+         actualsTable = actuals_.getTable();
+      }
+
       startAddRows();
 
       // Add some column headers
@@ -120,12 +143,85 @@ public class JiraSummaryPanel extends TableSpreadsheet
       headers[0].setBlendBackgroundColor(totalColor_);
       headers[1] =  new TableCellLabel(spreadSheet_.getSheetName());
       headers[1].setBlendBackgroundColor(totalColor_);
-      headers[2] =  new TableCellLabel(spreadSheet_.getStatus());
+      if ( spreadSheet_.getTable() == null )
+      {
+         headers[2] =  new TableCellLabel(spreadSheet_.getStatus());
+      }
+      else
+      {  
+         // Show button to change the sheet that is loaded for JIRA
+         JButton sheetB = new JButton("Change sheet");
+         sheetB.addActionListener(new ActionListener() 
+         { 
+            public void actionPerformed(ActionEvent e) 
+            { 
+               String input = (String) JOptionPane.showInputDialog(
+                  null, 
+                  "Choose now...",
+                  "Select sheet", 
+                  JOptionPane.QUESTION_MESSAGE, 
+                  null,
+                  spreadSheet_.getSheets(), 
+                  spreadSheet_.getSheetName()); 
+               if ( input != null )
+               {
+                  spreadSheet_.setSheetName(input);
+                  spreadSheet_.loadBG();
+               }
+            } 
+         });
+         headers[2] =  new TableCellButton(sheetB);
+      }
       headers[2].setItalics(true);
       headers[2].setBlendBackgroundColor(totalColor_);
       addRowOfCells(headers);
+      if ( actuals_ != null )
+      {
+         headers = new TableCell[HmiColumns.length()];
+         for ( int ci=0; ci<HmiColumns.length(); ci++ )
+         {
+            headers[ci] =  new TableCellLabel("");
+            headers[ci].setBlendBackgroundColor(totalColor_);
+         }
+         headers[0] =  new TableCellLabel(actuals_.getFileName());
+         headers[0].setBlendBackgroundColor(totalColor_);
+         headers[1] =  new TableCellLabel(actuals_.getSheetName());
+         headers[1].setBlendBackgroundColor(totalColor_);
+         if ( actuals_.getTable() == null )
+         {
+            headers[2] =  new TableCellLabel(actuals_.getStatus());
+         }
+         else
+         {     
+            // Show button to change the sheet that is loaded for actuals     
+            JButton sheetB = new JButton("Change sheet");
+            sheetB.addActionListener(new ActionListener() 
+            { 
+               public void actionPerformed(ActionEvent e) 
+               { 
+                  String input = (String) JOptionPane.showInputDialog(
+                     null, 
+                     "Choose now...",
+                     "Select sheet", 
+                     JOptionPane.QUESTION_MESSAGE, 
+                     null,
+                     actuals_.getSheets(), 
+                     actuals_.getSheetName()); 
+                  if ( input != null )
+                  {
+                     actuals_.setSheetName(input);
+                     actuals_.loadBG();
+                  }
+               } 
+            });
+            headers[2] =  new TableCellButton(sheetB);
+         }
+         headers[2].setItalics(true);
+         headers[2].setBlendBackgroundColor(totalColor_);
+         addRowOfCells(headers);
+      }
 
-      // Process the valid spreadsheets
+      // Process the WPSRs (i.e., charge codes)
       Resource[] wpsrTotal = new Resource[wpsrsRef_.size()];
       for ( int wpsrIndex=0; wpsrIndex<wpsrsRef_.size(); wpsrIndex++ )
       {      
@@ -168,6 +264,13 @@ public class JiraSummaryPanel extends TableSpreadsheet
             {
                continue;
             }
+            
+            // Set actuals to zero if using the alternate actual spreadsheet
+            if ( actuals_ != null )
+            {
+               cells[SsColumns.ACTUAL.getIndex()].update(0.0);
+            }
+            
             for ( Resource resource : ssResources )
             {
                resource.sumif(cells);
@@ -187,9 +290,37 @@ public class JiraSummaryPanel extends TableSpreadsheet
             {
                continue;
             }
+            
+            // Override actuals if actuals are provided
+            if ( actualsTable != null )
+            {
+               // Get the actuals for the current charge code and resource
+               double actuals = actuals_.getActuals(actualsTable, wpsrLabel, resource.getName());
+               
+               // Set the actuals for the resource in this charge code
+               resource.setActuals(actuals);
+               
+               // Add the WPSR (charge code) total
+               wpsrTotal[wpsrIndex].addActuals(actuals);
+               
+               // Add to the overall loading for this resource
+               for ( Resource gRes : globalResources )
+               {
+                  if ( gRes.getName().equalsIgnoreCase(resource.getName()) )
+                  {
+                     gRes.addActuals(actuals);
+                  }
+               }
+               
+               // Add to the global sum
+               globalTotal.addActuals(actuals);
+            }
+            
             addRowOfCells(resource.getTableCells());            
-         }
-      }
+         
+         } // for ( resource )
+         
+      } // for ( wpsr or charge code)
       
       // Find assigned time with no charge code
       Resource missingCC = new Resource("No Charge Code");
@@ -232,6 +363,7 @@ public class JiraSummaryPanel extends TableSpreadsheet
             {
                continue;
             }
+            
             for ( Resource resource : ssResources )
             {
                resource.sumif(cells);
@@ -251,6 +383,7 @@ public class JiraSummaryPanel extends TableSpreadsheet
             {
                continue;
             }
+            
             addRowOfCells(resource.getTableCells());            
          }
       }
@@ -313,9 +446,9 @@ public class JiraSummaryPanel extends TableSpreadsheet
       return controls;
    }
 
-
    private String[] resourceOrder_;
    private JiraSpreadSheet spreadSheet_;
+   private ActualsSpreadSheet actuals_;
    private ArrayList<String> wpsrsRef_;
    private HashMap<String, String> wpsrs_;
    private Color ssColor_ = new Color(0, 204, 102);

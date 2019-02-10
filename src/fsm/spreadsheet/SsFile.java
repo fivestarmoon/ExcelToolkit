@@ -54,6 +54,8 @@ public abstract class SsFile implements AutoCloseable
    public abstract int sheetNameToIndex(String name);
    public abstract String sheetIndexToName(int index);
    public abstract void openSheet(int sheetIndex) throws Exception;
+   public abstract int getNumberOfRows() throws Exception;
+   public abstract  String[] getSheets();
    
    public void getTable(SsTable ssTable)
    {

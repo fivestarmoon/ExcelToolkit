@@ -42,6 +42,31 @@ public class SsXlsx extends SsFile
          throw new Exception("Sheet index " + sheetIndex + " not found");
       }
    }
+   
+   @Override
+   public int getNumberOfRows() throws Exception
+   {
+      if ( sheet_ == null )
+      {
+         return 0;
+      }
+      return sheet_.getLastRowNum() - sheet_.getFirstRowNum() + 1;
+   }
+   
+   @Override
+   public String[] getSheets()
+   {
+      if ( wb_ == null )
+      {
+         return new String[0];
+      }
+      String [] sheets = new String[wb_.getNumberOfSheets()];
+      for ( int ii=0; ii<sheets.length; ii++ )
+      {
+         sheets[ii] = wb_.getSheetName(ii);
+      }
+      return sheets;
+   }
 
    @Override
    public void close()
