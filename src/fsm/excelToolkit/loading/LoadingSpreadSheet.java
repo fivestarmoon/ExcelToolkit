@@ -137,7 +137,7 @@ class LoadingSpreadSheet implements FileModifiedListener
       
       // Get the labels for the named resource
       ArrayList<String> labels = resourceMapping_.get(res);
-      if ( labels.size() == 0 )
+      if ( labels == null || labels.size() == 0 )
       {
          return hmiCellArray;
       }

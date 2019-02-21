@@ -177,14 +177,17 @@ class ActualsSpreadSheet implements FileModifiedListener
          // Match resource, where multiple resources are allowed to map to a single JIRA resource
          boolean resourceMatch = false;
          ArrayList<String> jiraRes = resourceMapping_.get(jiraResource);
-         for ( String res : jiraRes )
+         if ( jiraRes != null )
          {
-            if ( res.equalsIgnoreCase(cells[RESOURCE_COL].toString()) )
+            for ( String res : jiraRes )
             {
-               resourceMatch = true;
-               break;
-            }
-         }         
+               if ( res.equalsIgnoreCase(cells[RESOURCE_COL].toString()) )
+               {
+                  resourceMatch = true;
+                  break;
+               }
+            }  
+         }
          if ( !resourceMatch )
          {
             continue;
