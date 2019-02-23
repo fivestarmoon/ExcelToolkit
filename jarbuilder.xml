@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
 <project name="ExcelToolkitJarBuilder" basedir="C:\Users\Kurt\Documents\Kurt\eclipse.workspace" default="jar">
     <target name="jar" description="JARs the Task">
+        <tstamp>
+            <format property="BuildDate" pattern="yyyy-MM-dd"/>
+        </tstamp>
   		<jar destfile="ExcelToolkitScratch/ExcelToolkit.jar">
   			<zipgroupfileset  dir="Common/cots/json" includes="json-simple-1.1.jar" />
   			<fileset dir="Common/bin"/>
@@ -8,6 +11,7 @@
   			<fileset dir="ExcelToolkit/bin"/>
     		<manifest>
       			<attribute name="Main-Class" value="fsm.excelToolkit.Main"/>
+    	        <attribute name="Implementation-Version" value="${BuildDate}"/> 
     		</manifest>
   		</jar>
     </target>

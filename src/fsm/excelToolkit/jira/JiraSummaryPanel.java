@@ -167,6 +167,12 @@ public class JiraSummaryPanel extends TableSpreadsheet
                {
                   spreadSheet_.setSheetName(input);
                   spreadSheet_.loadBG();
+
+                  if ( actuals_.getTable() != null && actuals_.getAssumeSheetNameMatchJira() )
+                  {
+                     actuals_.setSheetName(input);
+                     actuals_.loadBG();
+                  }
                }
             } 
          });
@@ -187,7 +193,7 @@ public class JiraSummaryPanel extends TableSpreadsheet
          headers[0].setBlendBackgroundColor(totalColor_);
          headers[1] =  new TableCellLabel(actuals_.getSheetName());
          headers[1].setBlendBackgroundColor(totalColor_);
-         if ( actuals_.getTable() == null )
+         if ( actuals_.getTable() == null || actuals_.getAssumeSheetNameMatchJira() )
          {
             headers[2] =  new TableCellLabel(actuals_.getStatus());
          }

@@ -15,6 +15,11 @@ public class Main
    {
       return LogFileName_s;
    }
+   
+   public static String GetBuildDate_s()
+   {
+      return BuildDate_s;
+   }
 
    public static void main(final String[] args)
    {
@@ -30,7 +35,21 @@ public class Main
       }
       Log.Init(new File(LogFileName_s));
       Log.info("Starting ...");
-
+      
+      // Get the build string
+      try
+      {
+         BuildDate_s = Main.class.getPackage().getImplementationVersion();
+         if ( BuildDate_s == null )
+         {
+            throw new Exception();
+         }
+      }
+      catch ( Exception e )
+      {
+         BuildDate_s = "not set";
+      }
+      Log.info("version : " + BuildDate_s);
 
       // Schedule a job for the event-dispatching thread:
       // creating and showing this application's GUI.
@@ -72,5 +91,6 @@ public class Main
    // --- PRIVATE
 
    private static String LogFileName_s = "ExcelToolkit.log";
+   private static String BuildDate_s = "";
 
 }

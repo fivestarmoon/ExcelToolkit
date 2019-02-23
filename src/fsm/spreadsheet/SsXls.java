@@ -69,6 +69,16 @@ public class SsXls extends SsFile
    }
 
    @Override
+   public String getSheetName()
+   {
+      if ( wb_ == null || sheet_ == null )
+      {
+         return "invalid";
+      }
+      return sheet_.getSheetName();
+   }
+
+   @Override
    public void close()
    {
       try

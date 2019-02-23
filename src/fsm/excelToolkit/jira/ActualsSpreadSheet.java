@@ -22,6 +22,7 @@ class ActualsSpreadSheet implements FileModifiedListener
    {            
       parentPanel_ = panel;
       filename_ = reader.getStringValue("file", "");
+      assumeSheetNameMatchJira_ = reader.getBooleanValue("assumeSheetNameMatchJira", false);
       sheetOffset_ = 0;
       projCodeCol_ = SsCell.ColumnLettersToIndex(reader.getStringValue("projCodeCol", "A"));
       chargeCodeCol_ = SsCell.ColumnLettersToIndex(reader.getStringValue("chargeCodeCol", "A"));
@@ -77,6 +78,11 @@ class ActualsSpreadSheet implements FileModifiedListener
    public String getStatus()
    {
       return status_;
+   }
+   
+   public boolean getAssumeSheetNameMatchJira()
+   {
+      return assumeSheetNameMatchJira_;
    }
 
    public void destroy()
@@ -220,7 +226,16 @@ class ActualsSpreadSheet implements FileModifiedListener
          }
          else
          {
-            file.openSheet(file.sheetNameToIndex(readSheetName_));
+            try
+            {
+               file.openSheet(file.sheetNameToIndex(readSheetName_));
+            }
+            catch (Exception e)
+            {
+               Log.severe("Did not find sheet [" + readSheetName_ + "] in the actuals spreadsheet");
+               file.openSheet(0);
+               readSheetName_ = file.sheetIndexToName(sheetOffset_);
+            }
          }
          readSheets_ = file.getSheets();
          table = new SsTable();
@@ -268,6 +283,7 @@ class ActualsSpreadSheet implements FileModifiedListener
    
    private JiraSummaryPanel parentPanel_;
    private String filename_;
+   private boolean assumeSheetNameMatchJira_;
    private int    sheetOffset_;
    private int    projCodeCol_;
    private int    chargeCodeCol_;
