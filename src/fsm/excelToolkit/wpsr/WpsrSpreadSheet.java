@@ -365,7 +365,7 @@ class WpsrSpreadSheet implements FileModifiedListener
             WpsrSummaryPanel panel = WpsrSpreadSheet.this.parentPanel_;
             if ( panel != null )
             {
-               panel.displayTable();
+               panel.displaySpreadSheet();
                if ( table != null )
                {
                   readyForNextWeek_ = true;

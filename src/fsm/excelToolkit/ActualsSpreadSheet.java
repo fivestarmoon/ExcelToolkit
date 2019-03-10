@@ -1,4 +1,4 @@
-package fsm.excelToolkit.jira;
+package fsm.excelToolkit;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -8,15 +8,16 @@ import fsm.common.Log;
 import fsm.common.parameters.Reader;
 import fsm.common.utils.FileModifiedListener;
 import fsm.common.utils.FileModifiedMonitor;
+import fsm.excelToolkit.hmi.table.TableSpreadsheet;
 import fsm.spreadsheet.SsCell;
 import fsm.spreadsheet.SsCell.Type;
 import fsm.spreadsheet.SsFile;
 import fsm.spreadsheet.SsTable;
 
-class ActualsSpreadSheet implements FileModifiedListener
+public class ActualsSpreadSheet implements FileModifiedListener
 { 
-   ActualsSpreadSheet(
-      JiraSummaryPanel panel,
+   public ActualsSpreadSheet(
+      TableSpreadsheet panel,
       Reader           reader,
       String[]         jiraResources)
    {            
@@ -281,7 +282,7 @@ class ActualsSpreadSheet implements FileModifiedListener
    private static final int RESOURCE_COL = 2;
    private static final int ACTUAL_COL = 3;
    
-   private JiraSummaryPanel parentPanel_;
+   private TableSpreadsheet parentPanel_;
    private String filename_;
    private boolean assumeSheetNameMatchJira_;
    private int    sheetOffset_;

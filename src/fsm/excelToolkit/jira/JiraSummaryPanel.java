@@ -10,6 +10,7 @@ import javax.swing.JButton;
 import javax.swing.JOptionPane;
 
 import fsm.common.parameters.Reader;
+import fsm.excelToolkit.ActualsSpreadSheet;
 import fsm.excelToolkit.hmi.table.TableCell;
 import fsm.excelToolkit.hmi.table.TableCellButton;
 import fsm.excelToolkit.hmi.table.TableCellLabel;
@@ -80,16 +81,8 @@ public class JiraSummaryPanel extends TableSpreadsheet
          actuals_.loadBG();
       }
    }
-   
-   @Override
-   protected void destroyPanel()
-   {
-      spreadSheet_.destroy();      
-   }
 
-   // --- PRIVATE
-
-   void displaySpreadSheet()
+   public void displaySpreadSheet()
    {
       // Determine the resource names to sum against
       ArrayList<String> uniqueResourceTemp = new ArrayList<String>();
@@ -434,6 +427,16 @@ public class JiraSummaryPanel extends TableSpreadsheet
       // Display the panel
       displayPanel();
    }
+
+   // --- PROTECTED
+   
+   @Override
+   protected void destroyPanel()
+   {
+      spreadSheet_.destroy();      
+   }
+
+   // --- PRIVATE
 
    private TableCell[] getTitleRow(String title, Color color)
    {      

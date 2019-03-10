@@ -58,21 +58,9 @@ public class GenericSheetPanel extends TableSpreadsheet
          spreadsheets_.get(ref).load();
       }
    }
-   
+
    @Override
-   protected void destroyPanel()
-   {
-      for ( String ref : ssReferences_ )
-      {
-         LocalSpreadSheet ss = spreadsheets_.get(ref);
-         ss.destroy();
-      }
-      
-   }
-
-   // --- PRIVATE
-
-   private void displaySpreadSheet(String ssReference, LocalSpreadSheet sheet)
+   public void displaySpreadSheet()
    {
       // Process the valid spreadsheets
       startAddRows();
@@ -152,6 +140,19 @@ public class GenericSheetPanel extends TableSpreadsheet
       // Display the panel
       displayPanel();
    }
+   
+   @Override
+   protected void destroyPanel()
+   {
+      for ( String ref : ssReferences_ )
+      {
+         LocalSpreadSheet ss = spreadsheets_.get(ref);
+         ss.destroy();
+      }
+      
+   }
+
+   // --- PRIVATE
 
    private class LocalSpreadSheet implements FileModifiedListener
    {      
@@ -305,7 +306,7 @@ public class GenericSheetPanel extends TableSpreadsheet
             public void run()
             {
                table_ = table;
-               displaySpreadSheet(ssReference_, LocalSpreadSheet.this);
+               displaySpreadSheet();
                if ( table_ != null )
                {
                   monitor_ = new FileModifiedMonitor(new File(filename_), LocalSpreadSheet.this);

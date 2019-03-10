@@ -293,11 +293,10 @@ class LoadingSpreadSheet implements FileModifiedListener
             LoadingSummaryPanel panel = LoadingSpreadSheet.this.parentPanel_;
             if ( panel != null )
             {
-               panel.displaySpreadSheet(filename_, LoadingSpreadSheet.this);
+               panel.displaySpreadSheet();
                if ( table != null )
                {
                   monitor_ = new FileModifiedMonitor(new File(filename_), LoadingSpreadSheet.this);
-                  isModified_ = false;
                }
             }
          }         

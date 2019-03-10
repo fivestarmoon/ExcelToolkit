@@ -117,21 +117,9 @@ public class WpsrSummaryPanel extends TableSpreadsheet
          spreadsheets_.get(ref).loadBG();
       }
    }
-   
+
    @Override
-   protected void destroyPanel()
-   {
-      for ( String ref : ssReferences_ )
-      {
-         WpsrSpreadSheet ss = spreadsheets_.get(ref);
-         ss.destroy();
-      }
-      
-   }
-
-   // --- PRIVATE
-
-   void displayTable()
+   public void displaySpreadSheet()
    {
       // Determine the resource names to sum against
       ArrayList<String> uniqueResourceTemp = new ArrayList<String>();
@@ -316,6 +304,20 @@ public class WpsrSummaryPanel extends TableSpreadsheet
       displayPanel();
    }
 
+   
+   @Override
+   protected void destroyPanel()
+   {
+      for ( String ref : ssReferences_ )
+      {
+         WpsrSpreadSheet ss = spreadsheets_.get(ref);
+         ss.destroy();
+      }
+      
+   }
+
+   // --- PRIVATE
+   
    private TableCell[] getTitleRow(String title, Color color)
    {      
       // Add the control row

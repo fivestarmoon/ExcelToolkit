@@ -146,27 +146,9 @@ public class LoadingSummaryPanel extends TableSpreadsheet
          spreadsheets_.get(ref).loadBG();
       }
    }
-   
-   @Override
-   protected void destroyPanel()
-   {
-      for ( String ref : ssReferences_ )
-      {
-         LoadingSpreadSheet ss = spreadsheets_.get(ref);
-         ss.destroy();
-      }
-      
-   }
 
    @Override
-   protected int getAutoResizeMode()
-   {
-      return JTable.AUTO_RESIZE_OFF; 
-   }
-
-   // --- PRIVATE
-
-   void displaySpreadSheet(String ssReference, LoadingSpreadSheet sheet)
+   public void displaySpreadSheet()
    {
       // Number of months to sum
       final int NumberOfMonths = LoadingMonth.DiffInMonths(endDate_, startDate_);
@@ -296,6 +278,25 @@ public class LoadingSummaryPanel extends TableSpreadsheet
       // Display the panel
       displayPanel();
    }
+   
+   @Override
+   protected void destroyPanel()
+   {
+      for ( String ref : ssReferences_ )
+      {
+         LoadingSpreadSheet ss = spreadsheets_.get(ref);
+         ss.destroy();
+      }
+      
+   }
+
+   @Override
+   protected int getAutoResizeMode()
+   {
+      return JTable.AUTO_RESIZE_OFF; 
+   }
+
+   // --- PRIVATE
    
    private TableCell[] convertToRow(SsCell[] cells, int warningThreshold)
    {

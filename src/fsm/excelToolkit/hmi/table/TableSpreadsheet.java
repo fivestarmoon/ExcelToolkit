@@ -90,9 +90,12 @@ public abstract  class TableSpreadsheet extends JPanel
       return window_;
    }
    
+   public abstract void displaySpreadSheet();
+   
    // --- PROTECTED
 
    protected abstract void createPanelBG() throws TableException;
+
    protected abstract void destroyPanel();
 
    final protected Parameters getParameters()
