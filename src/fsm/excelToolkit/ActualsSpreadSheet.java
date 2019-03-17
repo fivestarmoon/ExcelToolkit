@@ -28,7 +28,7 @@ public class ActualsSpreadSheet implements FileModifiedListener
       {
          assumeSheetNameMatchParent_ = reader.getBooleanValue("assumeSheetNameMatchJira", false);
       }
-      else
+      if ( reader.isKeyForValue("assumeSheetNameMatchParent") )
       {
          assumeSheetNameMatchParent_ = reader.getBooleanValue("assumeSheetNameMatchParent", false);
       }

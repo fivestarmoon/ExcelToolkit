@@ -26,6 +26,14 @@ public abstract class SsFile implements AutoCloseable
    public SsFile(File file)
    {
       file_ = file;
+      
+      // If file doesn't exist, potentially bad path, then try the file at the current working directory
+      // - user.dir is updated in Window.processNewParameterFile() 
+      if ( !file_.exists() )
+      {
+         String workingDir = System.getProperty("user.dir", ".");
+         file_ = new File (workingDir + File.separator + file_.getName());
+      }
    }
    
    public File getFile()

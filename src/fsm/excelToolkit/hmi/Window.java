@@ -216,6 +216,14 @@ implements WindowListener, DropTargetListener, FileModifiedListener
    {   
       try
       {
+         // Update the working directory
+         File file = new File(absolutePath);
+         String path = file.getParent();
+         if ( path != null )
+         {
+            System.setProperty("user.dir", path);
+         }
+         
          if ( fileModifiedMonitor_ != null )
          {
             fileModifiedMonitor_.stop();
