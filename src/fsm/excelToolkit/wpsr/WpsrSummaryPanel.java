@@ -10,9 +10,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import javax.swing.JButton;
+import javax.swing.JOptionPane;
 
 import fsm.common.Log;
 import fsm.common.parameters.Reader;
+import fsm.excelToolkit.ActualsSpreadSheet;
 import fsm.excelToolkit.hmi.table.TableCell;
 import fsm.excelToolkit.hmi.table.TableCellButton;
 import fsm.excelToolkit.hmi.table.TableCellLabel;
@@ -76,17 +78,32 @@ public class WpsrSummaryPanel extends TableSpreadsheet
          SsColumns.ETC.setDefaultValue(reader.getStringValue("etcColDefault", "A"));
       }
       int sheetOffsetDefault = 0;
-      if ( reader.isKeyForValue("etcColDefault") )
+      if ( reader.isKeyForValue("sheetOffsetDefault") )
       {
          sheetOffsetDefault = (int)reader.getLongValue("sheetOffsetDefault", 0);
       }
+      String infoshareColDefault = "A";
+      if ( reader.isKeyForValue("infoshareColDefault") )
+      {
+         infoshareColDefault = reader.getStringValue("infoshareColDefault", "A");
+      }
+      int startInfoshareRowDefault = 0;
+      if ( reader.isKeyForValue("startInfoshareRowDefault") )
+      {
+         startInfoshareRowDefault = (int)reader.getLongValue("startInfoshareRowDefault", 0);
+      }
+      int endInfoshareRowDefault = 0;
+      if ( reader.isKeyForValue("endInfoshareRowDefault") )
+      {
+         endInfoshareRowDefault = (int)reader.getLongValue("endInfoshareRowDefault", 0);
+      }
       int startRowDefault = 0;
-      if ( reader.isKeyForValue("etcColDefault") )
+      if ( reader.isKeyForValue("startRowDefault") )
       {
          startRowDefault = (int)reader.getLongValue("startRowDefault", 0);
       }
       int endRowDefault = 0;
-      if ( reader.isKeyForValue("etcColDefault") )
+      if ( reader.isKeyForValue("endRowDefault") )
       {
          endRowDefault = (int)reader.getLongValue("endRowDefault", 0);
       }
@@ -107,6 +124,9 @@ public class WpsrSummaryPanel extends TableSpreadsheet
             rootDir,
             weekEndingCell,
             sheetOffsetDefault,
+            infoshareColDefault,
+            startInfoshareRowDefault,
+            endInfoshareRowDefault,
             startRowDefault,
             endRowDefault);
          ssReferences_.add(ss.filename_);
@@ -115,6 +135,17 @@ public class WpsrSummaryPanel extends TableSpreadsheet
       for ( String ref : ssReferences_ )
       {
          spreadsheets_.get(ref).loadBG();
+      }
+      
+      actuals_ = null;
+      if ( reader.isKeyForStruct("infoshareActuals") )
+      {
+         actuals_ = new ActualsSpreadSheet(
+            this,
+            reader.struct("infoshareActuals"), 
+            resourceOrder_,
+            "wpsrResource");
+         actuals_.loadBG();
       }
    }
 
@@ -161,6 +192,52 @@ public class WpsrSummaryPanel extends TableSpreadsheet
 
       // Process the valid spreadsheets
       startAddRows();
+      if ( actuals_ != null )
+      {
+         TableCell[] headers = new TableCell[HmiColumns.length()];
+         headers = new TableCell[HmiColumns.length()];
+         for ( int ci=0; ci<HmiColumns.length(); ci++ )
+         {
+            headers[ci] =  new TableCellLabel("");
+            headers[ci].setBlendBackgroundColor(totalColor_);
+         }
+         headers[0] =  new TableCellLabel(actuals_.getFileName());
+         headers[0].setBlendBackgroundColor(totalColor_);
+         headers[1] =  new TableCellLabel(actuals_.getSheetName());
+         headers[1].setBlendBackgroundColor(totalColor_);
+         if ( actuals_.getTable() == null || actuals_.getAssumeSheetNameMatchParent() )
+         {
+            headers[2] =  new TableCellLabel(actuals_.getStatus());
+         }
+         else
+         {     
+            // Show button to change the sheet that is loaded for actuals     
+            JButton sheetB = new JButton("Change sheet");
+            sheetB.addActionListener(new ActionListener() 
+            { 
+               public void actionPerformed(ActionEvent e) 
+               { 
+                  String input = (String) JOptionPane.showInputDialog(
+                     null, 
+                     "Choose now...",
+                     "Select sheet", 
+                     JOptionPane.QUESTION_MESSAGE, 
+                     null,
+                     actuals_.getSheets(), 
+                     actuals_.getSheetName()); 
+                  if ( input != null )
+                  {
+                     actuals_.setSheetName(input);
+                     actuals_.loadBG();
+                  }
+               } 
+            });
+            headers[2] =  new TableCellButton(sheetB);
+         }
+         headers[2].setItalics(true);
+         headers[2].setBlendBackgroundColor(totalColor_);
+         addRowOfCells(headers);
+      }
       for ( String ref : ssReferences_ )
       {
          WpsrSpreadSheet ss = spreadsheets_.get(ref);          
@@ -186,7 +263,7 @@ public class WpsrSummaryPanel extends TableSpreadsheet
          { 
             public void actionPerformed(ActionEvent e) 
             { 
-               ss.nextWeek();
+               ss.nextWeek(actuals_);
             } 
          });
          controls[HmiColumns.ETC.getIndex()] =  new TableCellButton(nextWeekB);
@@ -339,6 +416,7 @@ public class WpsrSummaryPanel extends TableSpreadsheet
    private String[] resourceOrder_;
    private ArrayList<String> ssReferences_;
    private HashMap<String, WpsrSpreadSheet> spreadsheets_;
+   private ActualsSpreadSheet actuals_;
    private Color ssColor_ = new Color(0, 204, 102);
    private Color totalColor_ = new Color(255, 179, 102);
 

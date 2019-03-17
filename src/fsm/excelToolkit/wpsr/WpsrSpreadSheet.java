@@ -18,6 +18,7 @@ import fsm.common.parameters.Reader;
 import fsm.common.swing.DatePickerPanel;
 import fsm.common.utils.FileModifiedListener;
 import fsm.common.utils.FileModifiedMonitor;
+import fsm.excelToolkit.ActualsSpreadSheet;
 import fsm.spreadsheet.SsCell;
 import fsm.spreadsheet.SsFile;
 import fsm.spreadsheet.SsTable;
@@ -26,6 +27,7 @@ class WpsrSpreadSheet implements FileModifiedListener
 {      
    /**
     * @param weekEndingCell 
+    * @param infoshareColDefault 
     * 
     */
    WpsrSpreadSheet(
@@ -34,6 +36,9 @@ class WpsrSpreadSheet implements FileModifiedListener
       String rootDir,
       String weekEndingCell, 
       int sheetOffsetDefault,
+      String infoshareColDefault, 
+      int startInfoshareRowDefault,
+      int endInfoshareRowDefault,
       int startRowDefault,
       int endRowDefault)
    {            
@@ -44,6 +49,10 @@ class WpsrSpreadSheet implements FileModifiedListener
       filename_ = filename_.replace("ROOTDIR", rootDir);
       weekEndingCell_ = reader.getStringValue("weekEndingCell", weekEndingCell);
       sheetOffset_ = (int)reader.getLongValue("sheetOffset", sheetOffsetDefault);
+      infoshareChargeCode_ = reader.getStringValue("infoshareChargeCode", "NOTSET");
+      infoshareCol_ = SsCell.ColumnLettersToIndex(reader.getStringValue("infoshareCol", infoshareColDefault));
+      startInfoshareRow_ = -1 + (int)reader.getLongValue("startInfoshareRow", startInfoshareRowDefault);
+      endInfoshareRow_ = -1 + (int)reader.getLongValue("endInfoshareRow", endInfoshareRowDefault);
       startRow_ = -1 + (int)reader.getLongValue("startRow", startRowDefault);
       endRow_ = -1 + (int)reader.getLongValue("endRow", endRowDefault);
       resourceCol_= SsCell.ColumnLettersToIndex(reader.getStringValue(
@@ -122,8 +131,10 @@ class WpsrSpreadSheet implements FileModifiedListener
       loadBG();
    }
 
-   public void nextWeek()
+   public void nextWeek(ActualsSpreadSheet actuals)
    {
+      final int startInfoshareRow = startInfoshareRowForNextWeek_;
+      final int endInfoshareRow = endInfoshareRowForNextWeek_;
       final int startRow = startRowForNextWeek_;
       final int endRow = endRowForNextWeek_;
       if ( !readyForNextWeek_ )
@@ -143,13 +154,18 @@ class WpsrSpreadSheet implements FileModifiedListener
       
       JLabel message1 = new JLabel("Please select end-of-week of day:");
       DatePickerPanel datePickerPanel = new DatePickerPanel(date);
-      JLabel message2 = new JLabel(
+      StringBuilder message2Str = new StringBuilder(
          "<html><br>Automatic preparation of WPSR includes:<br><ul>"
          + "<li>Duplicate the first sheet to selected day" + "</li>"
          + "<li>Sum PREV WEEK column and THIS WEEK colum into PREV WEEK column" + "</li>"
          + "<li>Clear THIS WEEK column to zero" + "</li>"
-         + "<li>Set End Week cell to selected day" + "</li>"
-         + "</ul><br>Proceed?</html>");
+         + "<li>Set End Week cell to selected day" + "</li>");
+      if ( actuals != null )
+      {
+         message2Str.append("<li>Update infoshare actuals" + "</li>");
+      }
+      message2Str.append("</ul><br>Proceed?</html>");
+      JLabel message2 = new JLabel(message2Str.toString());
       
       JPanel panel = new JPanel(); 
       panel.setLayout(new BorderLayout());
@@ -189,7 +205,14 @@ class WpsrSpreadSheet implements FileModifiedListener
          protected Void doInBackground() throws Exception 
          {
             long startTime = System.currentTimeMillis();
-            prepForNext(datePickerPanel.getDate(), weekEndingCell_, startRow, endRow);
+            prepForNext(
+               datePickerPanel.getDate(), 
+               weekEndingCell_, 
+               startInfoshareRow,
+               endInfoshareRow,
+               startRow, 
+               endRow, 
+               actuals);
             long duration = Math.max(500, 2000 - (System.currentTimeMillis() - startTime));
             Thread.sleep(duration);
             return null;
@@ -249,9 +272,39 @@ class WpsrSpreadSheet implements FileModifiedListener
          file.openSheet(sheetOffset_);
          readSheetName_ = file.sheetIndexToName(sheetOffset_);
          
+         // Determine the rows with infoshare actuals
+         int startInfoshareRow = startInfoshareRow_;
+         int endInfoshareRow = endInfoshareRow_;
+         String shortName = file.getFile().getName();
+         if ( startInfoshareRow == -1 || endInfoshareRow == -1 )
+         {
+            table = new SsTable();
+            table.addRow(0,  512);
+            table.addCol(SsCell.ColumnLettersToIndex("B"));
+            table.addCol(SsCell.ColumnLettersToIndex("C"));
+            file.getTable(table);
+            for ( int row : table.getRowIterator() )
+            {
+               SsCell[] cells = table.getCellsForRow(row);
+               if ( cells[0].toString().contains("TOTAL") )
+               {
+                  endInfoshareRow = table.getRowsInSheet()[row] - 1;
+               }
+               if ( cells[1].toString().contains("BUDGET") )
+               {
+                  startInfoshareRow = table.getRowsInSheet()[row] + 1;
+               }
+            }
+            Log.info(shortName + " auto detect infoshare rows " + (startInfoshareRow+1) + " to " + (endInfoshareRow+1));
+         }
+         else
+         {
+            Log.info(shortName + " loading infoshare rows " + (startInfoshareRow+1) + " to " + (endInfoshareRow+1));
+         }
+         
+         // Determine the rows with actuals/etc/eac
          int startRow = startRow_;
          int endRow = endRow_;
-         String shortName = file.getFile().getName();
          if ( startRow == -1 || endRow == -1 )
          {
             table = new SsTable();
@@ -277,6 +330,9 @@ class WpsrSpreadSheet implements FileModifiedListener
          {
             Log.info(shortName + " loading rows " + (startRow+1) + " to " + (endRow+1));
          }
+
+         startInfoshareRowForNextWeek_ = startInfoshareRow;
+         endInfoshareRowForNextWeek_ = endInfoshareRow;
          startRowForNextWeek_ = startRow;
          endRowForNextWeek_ = endRow;
          table = new SsTable();
@@ -301,8 +357,11 @@ class WpsrSpreadSheet implements FileModifiedListener
 
    protected void prepForNext(Calendar date, 
                               String weekEndingCell, 
+                              int startInfoshareRow, 
+                              int endInfoshareRow, 
                               int startRow, 
-                              int endRow)
+                              int endRow, 
+                              ActualsSpreadSheet actuals)
    { 
       try ( SsFile file = SsFile.Create(filename_) )
       {       
@@ -313,6 +372,12 @@ class WpsrSpreadSheet implements FileModifiedListener
          }
          file.read();
          
+         SsTable actualsTable = null;
+         if ( actuals != null )
+         {
+            actualsTable = actuals.getTable();
+         }
+         
          // Duplicate the first sheet
          file.openSheet(0);      
          file.duplicateSheet((new SimpleDateFormat("MMM dd")).format(date.getTime()));  
@@ -322,7 +387,26 @@ class WpsrSpreadSheet implements FileModifiedListener
          if ( weekEndingCell.length() > 0 )
          {     
             file.setDateCell(weekEndingCell, date);            
-         }         
+         }   
+         
+         // Modify the infoshare rows
+         if ( actualsTable != null )
+         {
+            SsTable table = new SsTable();
+            table.addRow(startInfoshareRow,  endInfoshareRow);
+            table.addCol(resourceCol_);
+            table.addCol(infoshareCol_);
+            file.getTable(table);
+            for ( int row : table.getRowIterator() )
+            {
+               SsCell[] cells = table.getCellsForRow(row);
+               double actDays = actuals.getActuals(actualsTable, infoshareChargeCode_, cells[0].toString());
+               cells[1].update(actDays);
+            } 
+            file.setTable(table);
+         }
+         
+         // Modify the actual/etc/aac rows
          SsTable table = new SsTable();
          table.addRow(startRow,  endRow);
          table.addCol(prevActualCol_);
@@ -341,6 +425,8 @@ class WpsrSpreadSheet implements FileModifiedListener
             }
          } 
          file.setTable(table);
+         
+         
          file.write();       
          file.close();
       }
@@ -382,6 +468,10 @@ class WpsrSpreadSheet implements FileModifiedListener
    String filename_;
    String weekEndingCell_;
    private int    sheetOffset_;
+   private String infoshareChargeCode_;
+   private int    infoshareCol_;
+   private int    startInfoshareRow_;
+   private int    endInfoshareRow_;
    private int    startRow_;
    private int    endRow_;
    private int    resourceCol_;
@@ -395,6 +485,8 @@ class WpsrSpreadSheet implements FileModifiedListener
    private String readSheetName_;
    private Resource ssTotal_;
    private boolean readyForNextWeek_;
+   private int    startInfoshareRowForNextWeek_;
+   private int    endInfoshareRowForNextWeek_;
    private int    startRowForNextWeek_;
    private int    endRowForNextWeek_;
    

@@ -77,7 +77,11 @@ public class JiraSummaryPanel extends TableSpreadsheet
       actuals_ = null;
       if ( reader.isKeyForStruct("actuals") )
       {
-         actuals_ = new ActualsSpreadSheet(this, reader.struct("actuals"), resourceOrder_);
+         actuals_ = new ActualsSpreadSheet(
+            this, 
+            reader.struct("actuals"), 
+            resourceOrder_,
+            "jiraResource");
          actuals_.loadBG();
       }
    }
@@ -161,7 +165,7 @@ public class JiraSummaryPanel extends TableSpreadsheet
                   spreadSheet_.setSheetName(input);
                   spreadSheet_.loadBG();
 
-                  if ( actuals_.getTable() != null && actuals_.getAssumeSheetNameMatchJira() )
+                  if ( actuals_.getTable() != null && actuals_.getAssumeSheetNameMatchParent() )
                   {
                      actuals_.setSheetName(input);
                      actuals_.loadBG();
@@ -186,7 +190,7 @@ public class JiraSummaryPanel extends TableSpreadsheet
          headers[0].setBlendBackgroundColor(totalColor_);
          headers[1] =  new TableCellLabel(actuals_.getSheetName());
          headers[1].setBlendBackgroundColor(totalColor_);
-         if ( actuals_.getTable() == null || actuals_.getAssumeSheetNameMatchJira() )
+         if ( actuals_.getTable() == null || actuals_.getAssumeSheetNameMatchParent() )
          {
             headers[2] =  new TableCellLabel(actuals_.getStatus());
          }

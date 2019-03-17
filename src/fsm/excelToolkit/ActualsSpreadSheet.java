@@ -19,35 +19,43 @@ public class ActualsSpreadSheet implements FileModifiedListener
    public ActualsSpreadSheet(
       TableSpreadsheet panel,
       Reader           reader,
-      String[]         jiraResources)
+      String[]         parentResources,
+      String           parentResourceKey)
    {            
       parentPanel_ = panel;
       filename_ = reader.getStringValue("file", "");
-      assumeSheetNameMatchJira_ = reader.getBooleanValue("assumeSheetNameMatchJira", false);
+      if ( reader.isKeyForValue("assumeSheetNameMatchJira") )
+      {
+         assumeSheetNameMatchParent_ = reader.getBooleanValue("assumeSheetNameMatchJira", false);
+      }
+      else
+      {
+         assumeSheetNameMatchParent_ = reader.getBooleanValue("assumeSheetNameMatchParent", false);
+      }
       sheetOffset_ = 0;
       projCodeCol_ = SsCell.ColumnLettersToIndex(reader.getStringValue("projCodeCol", "A"));
       chargeCodeCol_ = SsCell.ColumnLettersToIndex(reader.getStringValue("chargeCodeCol", "A"));
       resourceCol_= SsCell.ColumnLettersToIndex(reader.getStringValue("resourceCol", "A"));
       actualCol_ = SsCell.ColumnLettersToIndex(reader.getStringValue("actualCol", "A"));
       resourceMapping_ = new HashMap<String,ArrayList<String>>();
-      for ( String jiraResource : jiraResources )
+      for ( String parentResource : parentResources )
       {
-         resourceMapping_.put(jiraResource, new ArrayList<String>());
+         resourceMapping_.put(parentResource, new ArrayList<String>());
       }
       
-      // Allow more than one resource to map to the JIRA resource
+      // Allow more than one resource to map to the parent's resource
       Reader[] readers = reader.structArray("resource");
       for ( Reader resReader : readers )
       {
          String actualResource = resReader.getStringValue("actualResource", "");
-         String jiraResource = resReader.getStringValue("jiraResource", "");
-         ArrayList<String> jiraRes = resourceMapping_.get(jiraResource);
-         if ( jiraRes == null )
+         String parentResource = resReader.getStringValue(parentResourceKey, "");
+         ArrayList<String> parentRes = resourceMapping_.get(parentResource);
+         if ( parentRes == null )
          {
             Log.info("Actual spreadsheet resource '" + actualResource + "' did not match any 'resourceOrder'[]");
             continue;
          }
-         jiraRes.add(actualResource);
+         parentRes.add(actualResource);
       }
       
       status_ = "Loading...";
@@ -81,9 +89,9 @@ public class ActualsSpreadSheet implements FileModifiedListener
       return status_;
    }
    
-   public boolean getAssumeSheetNameMatchJira()
+   public boolean getAssumeSheetNameMatchParent()
    {
-      return assumeSheetNameMatchJira_;
+      return assumeSheetNameMatchParent_;
    }
 
    public void destroy()
@@ -140,22 +148,22 @@ public class ActualsSpreadSheet implements FileModifiedListener
       loadBG();
    }
    
-   public double getActuals(SsTable actualsTable, String jiraChargeCodeIn, String jiraResource)
+   public double getActuals(SsTable actualsTable, String parentChargeCodeIn, String parentResource)
    {          
-      // Trim trailing zero from the JIRA (not required for infoshare)
-      StringBuilder jiraChargeCode = new StringBuilder(jiraChargeCodeIn.trim());
-      for ( int ii=jiraChargeCode.length()-1; ii>= 0; ii-- )
+      // Trim trailing zero from the parent charge code (not required for infoshare)
+      StringBuilder parentChargeCode = new StringBuilder(parentChargeCodeIn.trim());
+      for ( int ii=parentChargeCode.length()-1; ii>= 0; ii-- )
       {
-         if (jiraChargeCode.charAt(ii) == '0')
+         if (parentChargeCode.charAt(ii) == '0')
          {
-            jiraChargeCode.setCharAt(ii, ' ');
+            parentChargeCode.setCharAt(ii, ' ');
          }
          else
          {
             break;
          }
       }
-      jiraChargeCodeIn = jiraChargeCode.toString().trim();  
+      parentChargeCodeIn = parentChargeCode.toString().trim();  
       
       // Attempt to find the charge code and resource combination in the spreadsheet
       for ( int row : actualsTable.getRowIterator() )
@@ -176,17 +184,17 @@ public class ActualsSpreadSheet implements FileModifiedListener
          
          
          // Match charge code
-         if ( !jiraChargeCodeIn.equalsIgnoreCase(actualChargeCode) )
+         if ( !parentChargeCodeIn.equalsIgnoreCase(actualChargeCode) )
          {
             continue;
          }
          
-         // Match resource, where multiple resources are allowed to map to a single JIRA resource
+         // Match resource, where multiple resources are allowed to map to a single parent resource
          boolean resourceMatch = false;
-         ArrayList<String> jiraRes = resourceMapping_.get(jiraResource);
-         if ( jiraRes != null )
+         ArrayList<String> parentRes = resourceMapping_.get(parentResource);
+         if ( parentRes != null )
          {
-            for ( String res : jiraRes )
+            for ( String res : parentRes )
             {
                if ( res.equalsIgnoreCase(cells[RESOURCE_COL].toString()) )
                {
@@ -268,7 +276,11 @@ public class ActualsSpreadSheet implements FileModifiedListener
          public void run()
          {
             table_ = table;
-            ActualsSpreadSheet.this.parentPanel_.displaySpreadSheet();
+            TableSpreadsheet parentPanel = ActualsSpreadSheet.this.parentPanel_;
+            if ( parentPanel != null )
+            {
+               parentPanel.displaySpreadSheet();
+            }
             if ( table != null )
             {
                monitor_ = new FileModifiedMonitor(new File(filename_), ActualsSpreadSheet.this);
@@ -284,7 +296,7 @@ public class ActualsSpreadSheet implements FileModifiedListener
    
    private TableSpreadsheet parentPanel_;
    private String filename_;
-   private boolean assumeSheetNameMatchJira_;
+   private boolean assumeSheetNameMatchParent_;
    private int    sheetOffset_;
    private int    projCodeCol_;
    private int    chargeCodeCol_;
