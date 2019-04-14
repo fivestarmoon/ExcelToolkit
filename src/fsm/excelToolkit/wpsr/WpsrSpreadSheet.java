@@ -20,6 +20,7 @@ import fsm.common.utils.FileModifiedListener;
 import fsm.common.utils.FileModifiedMonitor;
 import fsm.excelToolkit.ActualsSpreadSheet;
 import fsm.spreadsheet.SsCell;
+import fsm.spreadsheet.SsCell.Type;
 import fsm.spreadsheet.SsFile;
 import fsm.spreadsheet.SsTable;
 
@@ -402,6 +403,11 @@ class WpsrSpreadSheet implements FileModifiedListener
                SsCell[] cells = table.getCellsForRow(row);
                double actDays = actuals.getActuals(actualsTable, infoshareChargeCode_, cells[0].toString());
                cells[1].update(actDays);
+               if ( cells[0].getType() == Type.NUMERIC )
+               {
+                  // Handle empty resource cells that get treated as numeric
+                  cells[0] = new SsCell("");
+               }
             } 
             file.setTable(table);
          }

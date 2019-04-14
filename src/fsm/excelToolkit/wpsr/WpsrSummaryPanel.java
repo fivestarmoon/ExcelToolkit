@@ -107,6 +107,7 @@ public class WpsrSummaryPanel extends TableSpreadsheet
       {
          endRowDefault = (int)reader.getLongValue("endRowDefault", 0);
       }
+      varianceColorRedThreshold_ = reader.getDoubleValue("varianceColorRedThreshold", 0.1);
       
       // Get the default order for resources if available
       resourceOrder_ = new String[0];
@@ -334,7 +335,7 @@ public class WpsrSummaryPanel extends TableSpreadsheet
             {
                continue;
             }
-            addRowOfCells(resource.getTableCells());            
+            addRowOfCells(resource.getTableCells(varianceColorRedThreshold_));            
          }
       }
 
@@ -347,7 +348,7 @@ public class WpsrSummaryPanel extends TableSpreadsheet
             {
                continue;
             }
-            addRowOfCells(resource.getTableCells()); 
+            addRowOfCells(resource.getTableCells(varianceColorRedThreshold_)); 
          }
       }      
 
@@ -361,12 +362,12 @@ public class WpsrSummaryPanel extends TableSpreadsheet
             {
                continue;
             }
-            TableCell[] tableCells = ss.getResource().getTableCells();
+            TableCell[] tableCells = ss.getResource().getTableCells(varianceColorRedThreshold_);
             tableCells[0].setBlendBackgroundColor(ssColor_);
             addRowOfCells(tableCells);       
          }
       }
-      TableCell[] tableCells = globalTotal.getTableCells();
+      TableCell[] tableCells = globalTotal.getTableCells(varianceColorRedThreshold_);
       tableCells[0].setBold(true);
       for ( TableCell cell : tableCells )
       {
@@ -419,5 +420,6 @@ public class WpsrSummaryPanel extends TableSpreadsheet
    private ActualsSpreadSheet actuals_;
    private Color ssColor_ = new Color(0, 204, 102);
    private Color totalColor_ = new Color(255, 179, 102);
+   private double varianceColorRedThreshold_;
 
 }

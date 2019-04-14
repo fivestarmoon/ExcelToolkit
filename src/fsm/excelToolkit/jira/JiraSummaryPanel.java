@@ -49,6 +49,7 @@ public class JiraSummaryPanel extends TableSpreadsheet
       String budgetCol = reader.getStringValue(SsColumns.BUDGET.getResourceKey(), "C");
       String actualCol = reader.getStringValue(SsColumns.ACTUAL.getResourceKey(), "D");
       String estimateCol = reader.getStringValue(SsColumns.ETC.getResourceKey(), "E");
+      varianceColorRedThreshold_ = reader.getDoubleValue("varianceColorRedThreshold", 0.1);
       double timeConversion = reader.getDoubleValue("timeToDayConversion", 1.0);
       resourceOrder_ = new String[0];
       if ( reader.isKeyForArrayOfValues("resourceOrder") )
@@ -319,7 +320,7 @@ public class JiraSummaryPanel extends TableSpreadsheet
                globalTotal.addActuals(actuals);
             }
             
-            addRowOfCells(resource.getTableCells());            
+            addRowOfCells(resource.getTableCells(varianceColorRedThreshold_));            
          
          } // for ( resource )
          
@@ -387,7 +388,7 @@ public class JiraSummaryPanel extends TableSpreadsheet
                continue;
             }
             
-            addRowOfCells(resource.getTableCells());            
+            addRowOfCells(resource.getTableCells(varianceColorRedThreshold_));            
          }
       }
 
@@ -400,7 +401,7 @@ public class JiraSummaryPanel extends TableSpreadsheet
             {
                continue;
             }
-            addRowOfCells(resource.getTableCells()); 
+            addRowOfCells(resource.getTableCells(varianceColorRedThreshold_)); 
          }
       }      
 
@@ -409,15 +410,15 @@ public class JiraSummaryPanel extends TableSpreadsheet
          addRowOfCells(getTitleRow("WPSR TOTAL", totalColor_));
          for ( int wpsrIndex=0; wpsrIndex<wpsrsRef_.size(); wpsrIndex++ )
          {
-            TableCell[] tableCells = wpsrTotal[wpsrIndex].getTableCells();
+            TableCell[] tableCells = wpsrTotal[wpsrIndex].getTableCells(varianceColorRedThreshold_);
             tableCells[0].setBlendBackgroundColor(ssColor_);
             addRowOfCells(tableCells);  
          }
-         TableCell[] tableCells = missingCC.getTableCells();
+         TableCell[] tableCells = missingCC.getTableCells(varianceColorRedThreshold_);
          tableCells[0].setBlendBackgroundColor(ssColor_);
          addRowOfCells(tableCells); 
       }
-      TableCell[] tableCells = globalTotal.getTableCells();
+      TableCell[] tableCells = globalTotal.getTableCells(varianceColorRedThreshold_);
       tableCells[0].setBold(true);
       for ( TableCell cell : tableCells )
       {
@@ -466,5 +467,6 @@ public class JiraSummaryPanel extends TableSpreadsheet
    private HashMap<String, String> wpsrs_;
    private Color ssColor_ = new Color(0, 204, 102);
    private Color totalColor_ = new Color(255, 179, 102);
+   private double varianceColorRedThreshold_;
 
 }

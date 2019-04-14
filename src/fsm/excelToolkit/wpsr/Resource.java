@@ -44,7 +44,7 @@ public class Resource
       return used_;
    }
    
-   public TableCell[] getTableCells()
+   public TableCell[] getTableCells(double varianceColorRedThreshold)
    {
       TableCell[] tableCells = new TableCell[HmiColumns.length()];
       
@@ -74,7 +74,7 @@ public class Resource
       index = HmiColumns.VARIANCE.getIndex();
       double variance = budget - eac;
       tableCells[index] = new TableCellSpreadsheet(new SsCell(Round(variance)));
-      if ( variance < 0 )
+      if ( variance < -1*varianceColorRedThreshold )
       {
          tableCells[index].setBlendBackgroundColor(varianceWarning_);
       }
