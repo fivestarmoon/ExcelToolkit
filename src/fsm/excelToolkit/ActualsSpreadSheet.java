@@ -151,19 +151,8 @@ public class ActualsSpreadSheet implements FileModifiedListener
    public double getActuals(SsTable actualsTable, String parentChargeCodeIn, String parentResource)
    {          
       // Trim trailing zero from the parent charge code (not required for infoshare)
-      StringBuilder parentChargeCode = new StringBuilder(parentChargeCodeIn.trim());
-      for ( int ii=parentChargeCode.length()-1; ii>= 0; ii-- )
-      {
-         if (parentChargeCode.charAt(ii) == '0')
-         {
-            parentChargeCode.setCharAt(ii, ' ');
-         }
-         else
-         {
-            break;
-         }
-      }
-      parentChargeCodeIn = parentChargeCode.toString().trim();  
+      String temp = parentChargeCodeIn.trim().replaceAll("0+$", "");  
+      parentChargeCodeIn = temp;
       
       // Attempt to find the charge code and resource combination in the spreadsheet
       for ( int row : actualsTable.getRowIterator() )
@@ -181,6 +170,10 @@ public class ActualsSpreadSheet implements FileModifiedListener
             chargeCodeStr = Integer.toString((int)(cells[CHARGE_CODE_COL].getValue()));
          }
          String actualChargeCode = (projCodeStr + "-" + chargeCodeStr).trim();
+         
+         // Trim trailing zeros
+         temp = actualChargeCode.trim().replaceAll("0+$", "");  
+         actualChargeCode = temp;
          
          
          // Match charge code

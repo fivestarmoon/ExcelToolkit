@@ -9,6 +9,7 @@ import java.util.HashMap;
 import javax.swing.JButton;
 import javax.swing.JOptionPane;
 
+import fsm.common.Log;
 import fsm.common.parameters.Reader;
 import fsm.excelToolkit.ActualsSpreadSheet;
 import fsm.excelToolkit.hmi.table.TableCell;
@@ -264,7 +265,12 @@ public class JiraSummaryPanel extends TableSpreadsheet
          for ( int row : table.getRowIterator() )
          {
             SsCell[] cells = table.getCellsForRow(row);
-            if ( !wpsrLabel.equals(cells[SsColumns.CHARGECODE.getIndex()].toString()) )
+            
+            // Trim trailing zeros
+            String wprsLabelTrim = wpsrLabel.trim().replaceAll("0+$", "");  
+            String jiraChargeCode = cells[SsColumns.CHARGECODE.getIndex()].toString();
+            String jiraChargeCodeTrim = jiraChargeCode.trim().replaceAll("0+$", "");  
+            if ( !wprsLabelTrim.equalsIgnoreCase(jiraChargeCodeTrim) )
             {
                continue;
             }
@@ -274,17 +280,24 @@ public class JiraSummaryPanel extends TableSpreadsheet
             {
                cells[SsColumns.ACTUAL.getIndex()].update(0.0);
             }
-            
+
+            boolean matchingResource = false;
             for ( Resource resource : ssResources )
             {
-               resource.sumif(cells);
+               if ( resource.sumif(cells) )
+               {
+                  matchingResource = true;
+               }
             }
             for ( Resource resource : globalResources )
             {
                resource.sumif(cells);
             }
-            wpsrTotal[wpsrIndex].sum(cells);
-            globalTotal.sum(cells);
+            if ( matchingResource )
+            {
+               wpsrTotal[wpsrIndex].sum(cells);
+               globalTotal.sum(cells);
+            }
          }
 
          // Process each unique resource against the spreadsheet
@@ -327,7 +340,7 @@ public class JiraSummaryPanel extends TableSpreadsheet
       } // for ( wpsr or charge code)
       
       // Find assigned time with no charge code
-      Resource missingCC = new Resource("No Charge Code");
+      Resource missingCC = new Resource("Bad Resource or Charge Code (see log)");
       SsTable table = spreadSheet_.getTable();
       if ( table != null )
       {
@@ -352,33 +365,55 @@ public class JiraSummaryPanel extends TableSpreadsheet
          for ( int row : table.getRowIterator() )
          {
             SsCell[] cells = table.getCellsForRow(row);
+            
+            if ( cells[SsColumns.BUDGET.getIndex()].getValue() == 0.0
+                     && cells[SsColumns.ETC.getIndex()].getValue() == 0.0 )
+            {
+               continue; // all zero, don't care
+            }
 
-            boolean missing = true;
+            // Validate charge code
+            boolean matchingChargeCode = false;
             for ( int wpsrIndex=0; wpsrIndex<wpsrsRef_.size(); wpsrIndex++ )
             {      
                String wpsrLabel = wpsrsRef_.get(wpsrIndex);
-               if ( wpsrLabel.equals(cells[SsColumns.CHARGECODE.getIndex()].toString()) )
+               // Trim trailing zeros
+               String wprsLabelTrim = wpsrLabel.trim().replaceAll("0+$", "");  
+               String jiraChargeCode = cells[SsColumns.CHARGECODE.getIndex()].toString();
+               String jiraChargeCodeTrim = jiraChargeCode.trim().replaceAll("0+$", "");  
+               if ( wprsLabelTrim.equalsIgnoreCase(jiraChargeCodeTrim) )
                {
-                  missing = false;
+                  matchingChargeCode = true;
                   break;
                }
             }
-            if ( !missing )
+            
+            // Validate the resource
+            boolean matchingResource = false;
+            if ( matchingChargeCode )
             {
-               continue;
+               for ( Resource resource : ssResources )
+               {
+                  if ( resource.sumif(cells) )
+                  {
+                     matchingResource = true;
+                  }
+               }
             }
             
-            for ( Resource resource : ssResources )
+            if ( matchingChargeCode && matchingResource )
             {
-               resource.sumif(cells);
+               continue; // looks good!
             }
-            for ( Resource resource : globalResources )
-            {
-               resource.sumif(cells);
-            }
+            Log.info("Bad JIRA entry (missing resource or charge code); relative row " + row
+               + " Resource=" + cells[SsColumns.RESOURCE.getIndex()].toString()
+               + " ChargeCode=" + cells[SsColumns.CHARGECODE.getIndex()].toString()
+               + " Budget=" + cells[SsColumns.BUDGET.getIndex()].toString()
+               + " ETC=" + cells[SsColumns.ETC.getIndex()].toString()
+                     );
             missingCC.sum(cells);
-            globalTotal.sum(cells);
-         }
+            
+         } // for row in jira
 
          // Process each unique resource against the spreadsheet
          for ( Resource resource : ssResources )
@@ -414,9 +449,6 @@ public class JiraSummaryPanel extends TableSpreadsheet
             tableCells[0].setBlendBackgroundColor(ssColor_);
             addRowOfCells(tableCells);  
          }
-         TableCell[] tableCells = missingCC.getTableCells(varianceColorRedThreshold_);
-         tableCells[0].setBlendBackgroundColor(ssColor_);
-         addRowOfCells(tableCells); 
       }
       TableCell[] tableCells = globalTotal.getTableCells(varianceColorRedThreshold_);
       tableCells[0].setBold(true);
@@ -425,6 +457,15 @@ public class JiraSummaryPanel extends TableSpreadsheet
          cell.setBlendBackgroundColor(totalColor_);
       }
       addRowOfCells(tableCells); 
+      if ( missingCC.isUsed() )
+      {
+         tableCells = missingCC.getTableCells(varianceColorRedThreshold_);
+         for ( TableCell cell : tableCells )
+         {
+            cell.setBlendBackgroundColor(Color.red);
+         }
+         addRowOfCells(tableCells); 
+      }
 
       // All rows added
       stopAddRows();

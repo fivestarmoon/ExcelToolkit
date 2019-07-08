@@ -15,18 +15,19 @@ public class Resource
       used_ = false;
    }
    
-   public void sumif(SsCell[] cells)
+   public boolean sumif(SsCell[] cells)
    {
       if ( !name_.equals(cells[SsColumns.RESOURCE.getIndex()].toString()) )
       {
-         return;
+         return false;
       }
       used_ = true;
       for ( SsColumns col : SsColumns.values() )
       {
          int index = col.getIndex();
          sum_[index] += cells[index].getValue();
-      }          
+      }    
+      return true;
    }
    
    public void sum(SsCell[] cells)
