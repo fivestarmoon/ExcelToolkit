@@ -24,8 +24,8 @@ public class JiraSummaryPanel extends TableSpreadsheet
 {
    public JiraSummaryPanel()
    {
-      wpsrsRef_ = new ArrayList<String>();
-      wpsrs_ = new HashMap<String, String>();
+      chargeCodeRef_ = new ArrayList<String>();
+      chargeCode_ = new HashMap<String, String>();
    }
 
    @Override
@@ -58,12 +58,12 @@ public class JiraSummaryPanel extends TableSpreadsheet
          resourceOrder_ = reader.getStringArray("resourceOrder");
       }
       Reader[] readers = getParameters().getReader().structArray("chargeCodes");
-      for ( Reader wpsrReader : readers )
+      for ( Reader chargeCodeReader : readers )
       {
-         String label = wpsrReader.getStringValue("label", "notset");
-         String name = wpsrReader.getStringValue("name", "notset");
-         wpsrsRef_.add(label);
-         wpsrs_.put(label, name);
+         String label = chargeCodeReader.getStringValue("label", "notset");
+         String name = chargeCodeReader.getStringValue("name", "notset");
+         chargeCodeRef_.add(label);
+         chargeCode_.put(label, name);
       }
       spreadSheet_ =  new JiraSpreadSheet(
          this,
@@ -120,7 +120,6 @@ public class JiraSummaryPanel extends TableSpreadsheet
       {
          globalResources[ii] = new Resource(uniqueResource.get(ii));
       }
-      Resource globalTotal = new Resource("GLOBAL TOTAL");
 
       // Determine if the is an alternate spreadsheet for actuals
       SsTable actualsTable = null;
@@ -131,7 +130,8 @@ public class JiraSummaryPanel extends TableSpreadsheet
 
       startAddRows();
 
-      // Add some column headers
+      /////////////////////////////////////////////////////////////////////
+      // Add the jira spreadsheet header row with controls
       TableCell[] headers = new TableCell[HmiColumns.length()];
       for ( int ci=0; ci<HmiColumns.length(); ci++ )
       {
@@ -180,6 +180,9 @@ public class JiraSummaryPanel extends TableSpreadsheet
       headers[2].setItalics(true);
       headers[2].setBlendBackgroundColor(totalColor_);
       addRowOfCells(headers);
+      
+      /////////////////////////////////////////////////////////////////////
+      // Add the "actual" header row with controls if required
       if ( actuals_ != null )
       {
          headers = new TableCell[HmiColumns.length()];
@@ -226,14 +229,16 @@ public class JiraSummaryPanel extends TableSpreadsheet
          addRowOfCells(headers);
       }
 
-      // Process the WPSRs (i.e., charge codes)
-      Resource[] wpsrTotal = new Resource[wpsrsRef_.size()];
-      for ( int wpsrIndex=0; wpsrIndex<wpsrsRef_.size(); wpsrIndex++ )
+      /////////////////////////////////////////////////////////////////////
+      // Process each charge code
+      Resource globalTotal = new Resource("GLOBAL TOTAL");
+      Resource[] chargeCodeTotal = new Resource[chargeCodeRef_.size()];
+      for ( int ccIndex=0; ccIndex<chargeCodeRef_.size(); ccIndex++ )
       {      
-         String wpsrLabel = wpsrsRef_.get(wpsrIndex);
-         String wpsrName =  wpsrs_.get(wpsrLabel);
+         String ccLabel = chargeCodeRef_.get(ccIndex);
+         String ccName =  chargeCode_.get(ccLabel);
          SsTable table = spreadSheet_.getTable();
-         wpsrTotal[wpsrIndex] = new Resource(wpsrName);
+         chargeCodeTotal[ccIndex] = new Resource(ccName);
 
          // Add the control row
          TableCell[] controls = new TableCell[HmiColumns.length()];
@@ -241,7 +246,7 @@ public class JiraSummaryPanel extends TableSpreadsheet
          {
             controls[ci] =  new TableCellLabel("");
          }
-         controls[0] =  new TableCellLabel(wpsrLabel + " " + wpsrName);         
+         controls[0] =  new TableCellLabel(ccLabel + " " + ccName);         
          for ( int ci=0; ci<HmiColumns.length(); ci++ )
          {
             controls[ci].setBlendBackgroundColor(ssColor_);
@@ -255,19 +260,21 @@ public class JiraSummaryPanel extends TableSpreadsheet
          }
 
          // Create the summing resources for the charge code
-         Resource[] ssResources = new  Resource[uniqueResource.size()];
-         for ( int ii=0; ii<ssResources.length; ii++ )
+         Resource[] ccResources = new  Resource[uniqueResource.size()];
+         for ( int ii=0; ii<ccResources.length; ii++ )
          {
-            ssResources[ii] = new Resource(uniqueResource.get(ii));
+            ccResources[ii] = new Resource(uniqueResource.get(ii));
          }
 
          // Sum up all the rows into spreadsheet and global resources
+         // - add time to resources for the charge code
+         // - add time to charge code summing  and global summing (if matched!)
          for ( int row : table.getRowIterator() )
          {
             SsCell[] cells = table.getCellsForRow(row);
             
             // Trim trailing zeros
-            String wprsLabelTrim = wpsrLabel.trim().replaceAll("0+$", "");  
+            String wprsLabelTrim = ccLabel.trim().replaceAll("0+$", "");  
             String jiraChargeCode = cells[SsColumns.CHARGECODE.getIndex()].toString();
             String jiraChargeCodeTrim = jiraChargeCode.trim().replaceAll("0+$", "");  
             if ( !wprsLabelTrim.equalsIgnoreCase(jiraChargeCodeTrim) )
@@ -275,34 +282,42 @@ public class JiraSummaryPanel extends TableSpreadsheet
                continue;
             }
             
-            // Set actuals to zero if using the alternate actual spreadsheet
+            // Force the actuals to zero if using the alternate actual spreadsheet
+            // - i.e., ingore the actuals logged in jira
             if ( actuals_ != null )
             {
                cells[SsColumns.ACTUAL.getIndex()].update(0.0);
             }
 
+            // Add time to resources for the charge code
             boolean matchingResource = false;
-            for ( Resource resource : ssResources )
+            for ( Resource resource : ccResources )
             {
                if ( resource.sumif(cells) )
                {
                   matchingResource = true;
                }
             }
+            
+            // Add time to global resources
             for ( Resource resource : globalResources )
             {
                resource.sumif(cells);
             }
+            
+            // Add time to summing
             if ( matchingResource )
             {
-               wpsrTotal[wpsrIndex].sum(cells);
+               chargeCodeTotal[ccIndex].sum(cells);
                globalTotal.sum(cells);
             }
          }
 
-         // Process each unique resource against the spreadsheet
-         for ( Resource resource : ssResources )
+         // Process each unique resource against the spreadsheet and process
+         // the actual spreadsheet
+         for ( Resource resource : ccResources )
          {
+            // Resource is not working on charge code, skip
             if ( !resource.isUsed() )
             {
                continue;
@@ -312,13 +327,13 @@ public class JiraSummaryPanel extends TableSpreadsheet
             if ( actualsTable != null )
             {
                // Get the actuals for the current charge code and resource
-               double actuals = actuals_.getActuals(actualsTable, wpsrLabel, resource.getName());
+               double actuals = actuals_.getActuals(actualsTable, ccLabel, resource.getName());
                
                // Set the actuals for the resource in this charge code
                resource.setActuals(actuals);
                
-               // Add the WPSR (charge code) total
-               wpsrTotal[wpsrIndex].addActuals(actuals);
+               // Add the charge code total
+               chargeCodeTotal[ccIndex].addActuals(actuals);
                
                // Add to the overall loading for this resource
                for ( Resource gRes : globalResources )
@@ -337,30 +352,18 @@ public class JiraSummaryPanel extends TableSpreadsheet
          
          } // for ( resource )
          
-      } // for ( wpsr or charge code)
-      
+      } // for ( charge code)
+
+      /////////////////////////////////////////////////////////////////////
       // Find assigned time with no charge code
       Resource missingCC = new Resource("Bad Resource or Charge Code (see log)");
       SsTable table = spreadSheet_.getTable();
       if ( table != null )
-      {
-         // Add the control row
-         TableCell[] controls = new TableCell[HmiColumns.length()];
-         for ( int ci=0; ci<HmiColumns.length(); ci++ )
+      {         
+         Resource[] ccResources = new  Resource[uniqueResource.size()];
+         for ( int ii=0; ii<ccResources.length; ii++ )
          {
-            controls[ci] =  new TableCellLabel("");
-         }
-         controls[0] =  new TableCellLabel(missingCC.getName());         
-         for ( int ci=0; ci<HmiColumns.length(); ci++ )
-         {
-            controls[ci].setBlendBackgroundColor(ssColor_);
-         }
-         addRowOfCells(controls);
-         
-         Resource[] ssResources = new  Resource[uniqueResource.size()];
-         for ( int ii=0; ii<ssResources.length; ii++ )
-         {
-            ssResources[ii] = new Resource(uniqueResource.get(ii));
+            ccResources[ii] = new Resource(uniqueResource.get(ii));
          }
          for ( int row : table.getRowIterator() )
          {
@@ -374,14 +377,14 @@ public class JiraSummaryPanel extends TableSpreadsheet
 
             // Validate charge code
             boolean matchingChargeCode = false;
-            for ( int wpsrIndex=0; wpsrIndex<wpsrsRef_.size(); wpsrIndex++ )
+            for ( int ccIndex=0; ccIndex<chargeCodeRef_.size(); ccIndex++ )
             {      
-               String wpsrLabel = wpsrsRef_.get(wpsrIndex);
+               String ccLabel = chargeCodeRef_.get(ccIndex);
                // Trim trailing zeros
-               String wprsLabelTrim = wpsrLabel.trim().replaceAll("0+$", "");  
+               String ccLabelTrim = ccLabel.trim().replaceAll("0+$", "");  
                String jiraChargeCode = cells[SsColumns.CHARGECODE.getIndex()].toString();
                String jiraChargeCodeTrim = jiraChargeCode.trim().replaceAll("0+$", "");  
-               if ( wprsLabelTrim.equalsIgnoreCase(jiraChargeCodeTrim) )
+               if ( ccLabelTrim.equalsIgnoreCase(jiraChargeCodeTrim) )
                {
                   matchingChargeCode = true;
                   break;
@@ -392,7 +395,7 @@ public class JiraSummaryPanel extends TableSpreadsheet
             boolean matchingResource = false;
             if ( matchingChargeCode )
             {
-               for ( Resource resource : ssResources )
+               for ( Resource resource : ccResources )
                {
                   if ( resource.sumif(cells) )
                   {
@@ -414,20 +417,24 @@ public class JiraSummaryPanel extends TableSpreadsheet
             missingCC.sum(cells);
             
          } // for row in jira
-
-         // Process each unique resource against the spreadsheet
-         for ( Resource resource : ssResources )
+         
+      } // if ( table != null )
+      
+      // Found some bad jira rows with no resource and/or charge code
+      // - add a row with the some being all red
+      if ( missingCC.isUsed() )
+      {
+         // Add missing charge code
+         TableCell[] tableCells = missingCC.getTableCells(varianceColorRedThreshold_);
+         for ( TableCell cell : tableCells )
          {
-            if ( !resource.isUsed() )
-            {
-               continue;
-            }
-            
-            addRowOfCells(resource.getTableCells(varianceColorRedThreshold_));            
+            cell.setBlendBackgroundColor(Color.red);
          }
+         addRowOfCells(tableCells); 
       }
 
-      // Add the global summing for resources
+      /////////////////////////////////////////////////////////////////////
+      // Add the global summing for each resource
       {  
          addRowOfCells(getTitleRow("RESOURCE TOTAL", totalColor_));         
          for ( Resource resource : globalResources )
@@ -440,29 +447,26 @@ public class JiraSummaryPanel extends TableSpreadsheet
          }
       }      
 
-      // Add the overall global summing
+      /////////////////////////////////////////////////////////////////////
+      // Add the overall sum for each charge code
       {  
-         addRowOfCells(getTitleRow("WPSR TOTAL", totalColor_));
-         for ( int wpsrIndex=0; wpsrIndex<wpsrsRef_.size(); wpsrIndex++ )
+         addRowOfCells(getTitleRow("CHARGE CODE TOTAL", totalColor_));
+         for ( int ccIndex=0; ccIndex<chargeCodeRef_.size(); ccIndex++ )
          {
-            TableCell[] tableCells = wpsrTotal[wpsrIndex].getTableCells(varianceColorRedThreshold_);
+            TableCell[] tableCells = chargeCodeTotal[ccIndex].getTableCells(varianceColorRedThreshold_);
             tableCells[0].setBlendBackgroundColor(ssColor_);
             addRowOfCells(tableCells);  
          }
       }
-      TableCell[] tableCells = globalTotal.getTableCells(varianceColorRedThreshold_);
-      tableCells[0].setBold(true);
-      for ( TableCell cell : tableCells )
+      
+      /////////////////////////////////////////////////////////////////////
+      // Add the overall global summing
       {
-         cell.setBlendBackgroundColor(totalColor_);
-      }
-      addRowOfCells(tableCells); 
-      if ( missingCC.isUsed() )
-      {
-         tableCells = missingCC.getTableCells(varianceColorRedThreshold_);
+         TableCell[] tableCells = globalTotal.getTableCells(varianceColorRedThreshold_);
+         tableCells[0].setBold(true);
          for ( TableCell cell : tableCells )
          {
-            cell.setBlendBackgroundColor(Color.red);
+            cell.setBlendBackgroundColor(totalColor_);
          }
          addRowOfCells(tableCells); 
       }
@@ -504,8 +508,8 @@ public class JiraSummaryPanel extends TableSpreadsheet
    private String[] resourceOrder_;
    private JiraSpreadSheet spreadSheet_;
    private ActualsSpreadSheet actuals_;
-   private ArrayList<String> wpsrsRef_;
-   private HashMap<String, String> wpsrs_;
+   private ArrayList<String> chargeCodeRef_;
+   private HashMap<String, String> chargeCode_;
    private Color ssColor_ = new Color(0, 204, 102);
    private Color totalColor_ = new Color(255, 179, 102);
    private double varianceColorRedThreshold_;
