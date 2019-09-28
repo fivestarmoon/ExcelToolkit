@@ -183,7 +183,7 @@ implements WindowListener, DropTargetListener, FileModifiedListener
             @Override
             public void actionPerformed(ActionEvent e)
             {
-               JOptionPane.showMessageDialog(Window.this, "Excel Toolkit\nKurt Hagen\n" + Main.GetBuildDate_s());
+               JOptionPane.showMessageDialog(Window.this, "Excel Toolkit\nKurt Hagen\n" + Main.GetVersion_s());
             }      
          });
          helpMenu.add(menuItem);
